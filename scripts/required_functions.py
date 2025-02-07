@@ -13,8 +13,6 @@ from shapely.geometry import shape, mapping
 from pathlib import Path
 
 # function to resample geotiffs
-
-
 def tiff_resampler(input_tif,  # input tiff (string)
                    target_resolution,  # target x and y cell resolution (tuple)
                    resampling_method,  # choose rs resampling method (string)
@@ -44,8 +42,6 @@ def tiff_resampler(input_tif,  # input tiff (string)
             dst.write(data)
 
 # function to create binary raster based on refugia threshold
-
-
 def binary_converter(input_tif,  # input tif (string)
                      filepath,  # string + /
                      threshold,  # minimum value (integer)
@@ -62,8 +58,6 @@ def binary_converter(input_tif,  # input tif (string)
         dst.write(output_data.astype(profile['dtype']))
 
 # function to convert nc to geotiff
-
-
 def nc_geotiff_converter(input_nc,  # string
                          filepath,  # string + /
                          variable,  # string
@@ -83,8 +77,6 @@ def nc_geotiff_converter(input_nc,  # string
 
 
 # area calculation per raster cell in WGS84
-
-
 def land_area_calculation(filepath, input_name, output_name=None):
     """
     Function to calc land area for each raster cell in WGS84 without reprojecting
@@ -138,8 +130,6 @@ def pos_val_summer(arr, squeeze=True):
     return np.nansum(arr)  # Sum only non-NaN values
 
 # function to plot land-per-removal, removal, and land
-
-
 def process_data_and_plot(land_df, removal_df, cdr_option):
     land_per_removal = pd.merge(land_df, removal_df, on=['Scenario', 'Year'])
     land_per_removal['Land'] = land_per_removal['Land'] * 0.000001  # km2 to Mkm2
@@ -185,8 +175,6 @@ def process_data_and_plot(land_df, removal_df, cdr_option):
     return land_per_removal[['SSP', 'RCP', 'Year', 'Land', 'Removal', 'Mkm2/GtCO2']]
 
 # function to plot land-per-removal across models and ssps
-
-
 def process_mi_data_and_plot(land_df, removal_df, cdr_option, removal_type):
     land_per_removal = pd.merge(land_df, removal_df, on=['Model', 'Scenario', 'Year'])
     land_per_removal['Land'] = land_per_removal['Land'] * 0.000001  # km2 to Mkm2
@@ -261,8 +249,6 @@ def process_mi_data_and_plot(land_df, removal_df, cdr_option, removal_type):
     plt.show()
 
 # function to interpolate between available years to estimate cumulative removal
-
-
 def cum_cdr_calc(cdr_df):
     numeric_cols20 = [str(year) for year in range(2020, 2110, 10)]
     year_cols_all = [str(year) for year in range(2020, 2101)]
@@ -288,34 +274,6 @@ def cum_cdr_calc(cdr_df):
     return cum_cdr
 
 # function to concat multiple dfs across models
-
-
 def load_and_concat(suffix, paths):
     dfs = [pd.read_csv(_path / f'{i}_{suffix}.csv') for i, _path in paths.items()]
     return pd.concat(dfs, ignore_index=True)
-
-# function to overlay raster and admin boundary shapefile
-
-
-def admin_bound_calculator(key, admin_sf, intersect_src):
-    sf = admin_sf
-    shapes = sf.shapes()
-    records = sf.records()
-
-    country_vals = {}
-    for record, shp in zip(records, shapes):  # calc raster vals in polygons
-        country_name = record['iso3']
-        geom = shape(shp.__geo_interface__)
-        # mask the raster with the reprojected geometry
-        out_image, _ = mask(intersect_src, [mapping(geom)], crop=True)
-        out_image = out_image[0]  # extract the first band
-
-        nodata_value = intersect_src.nodata
-        if nodata_value is not None:
-            out_image = np.where(out_image == nodata_value, np.nan, out_image)
-
-        total_value = np.nansum(out_image)  # calc sum without nan values
-        country_vals[country_name] = total_value
-    df = pd.DataFrame(list(country_vals.items()), columns=['iso3', 'km2'])
-    df['key'] = key
-    return df[['key', 'iso3', 'km2']].copy()
