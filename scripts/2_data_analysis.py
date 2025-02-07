@@ -353,8 +353,8 @@ axes[2, 0].set_ylabel('GLOBIOM')
 axes[3, 0].set_ylabel('IMAGE')
 
 fig.supxlabel("Today's refugia lost to afforestation & bioenergy plantations (combined effect assuming all negative) [%]",
-              x=0.51, y=0.05)
-fig.supylabel("Today's refugia lost to global warming [%]", x=0.05)
+              x=0.51, y=0.045)
+fig.supylabel("Today's refugia lost to global warming [%]", x=0.055)
 
 plt.subplots_adjust(hspace=0.15)
 plt.subplots_adjust(wspace=0.15)

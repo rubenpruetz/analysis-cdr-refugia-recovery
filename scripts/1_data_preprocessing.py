@@ -173,13 +173,6 @@ for model in models:
         tiff_resampler(path / output_name, target_res, 'nearest',
                        path / output_name)
 
-        # ensure that files are capped at 100%
-        cap_file = rioxarray.open_rasterio(path / output_name,
-                                           decode_times=False,
-                                           band_as_variable=True)
-        cap_file = cap_file.where((cap_file <= 1) | cap_file.isnull(), 1)  ####################### maybe not required
-        cap_file.rio.to_raster(path / output_name, driver='GTiff')
-
     # compute total bioenergy and forest per scenario and year
     scenarios = lookup_table['scenario'].unique()
     scenarios = scenarios.astype(str)
