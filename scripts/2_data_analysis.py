@@ -113,14 +113,14 @@ for model in models:
                            biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
                            lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
 
-        # STEP1: load files for CDR, refugia, and baseline refugia
+        # STEP1: load files for LUC, refugia, and baseline refugia
         land_use = rioxarray.open_rasterio(filepath / f'{lu_model}_{input_tif}',
                                            masked=True)  # mask nan values for calc
 
-        bio_file_wCDR = ''.join(bio_select[(bio_select['Model'] == lu_model) &
+        bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
                                            (bio_select['Scenario'] == file_scenario)][file_year])
 
-        refugia = rioxarray.open_rasterio(path_uea / bio_file_wCDR,
+        refugia = rioxarray.open_rasterio(path_uea / bio_file,
                                           masked=True)  # mask nan values for calc
 
         refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
@@ -131,7 +131,7 @@ for model in models:
         refugia_ref = refugia_ref.rio.reproject_match(land_use)
 
         # calculate warming and land impact on reference refugia (global)
-        cdr_in_bio_ref = land_use * refugia_ref
+        luc_in_bio_ref = land_use * refugia_ref
         ref_bio_warm_loss = refugia_ref - refugia
         ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss_temp.tif',
                                         driver='GTiff')
@@ -142,12 +142,12 @@ for model in models:
         refugia_ref_a = land_area_calculation(path_uea, biodiv_ref_warm_file)
 
         # calculate aggregated area "losses" and baseline refugia
-        cdr_in_bio_ref_agg = pos_val_summer(cdr_in_bio_ref, squeeze=True)
+        luc_in_bio_ref_agg = pos_val_summer(luc_in_bio_ref, squeeze=True)
         ref_bio_warm_loss_agg = pos_val_summer(ref_bio_warm_loss_a, squeeze=True)
         refugia_ref_agg = pos_val_summer(refugia_ref_a, squeeze=True)
 
         # calculate warming and land impact on reference refugia (regional)
-        cdr_in_bio_ref_regs = []
+        luc_in_bio_ref_regs = []
         ref_bio_warm_loss_regs = []
         refugia_ref_regs = []
 
@@ -155,7 +155,7 @@ for model in models:
 
         for cz in cz_values:
             cz_m = cz.rio.reproject_match(land_use)  # ensure consistent match
-            cdr_in_bio_ref_cz = (land_use * refugia_ref) * cz_m
+            luc_in_bio_ref_cz = (land_use * refugia_ref) * cz_m
 
             ref_bio_warm_loss_cz = (refugia_ref - refugia) * cz_m
             ref_bio_warm_loss_cz.rio.to_raster(path_uea /
@@ -170,17 +170,17 @@ for model in models:
             refugia_ref_cz = land_area_calculation(path_uea,
                                                    'refugia_ref_cz_temp.tif')
 
-            cdr_in_bio_ref_cz = pos_val_summer(cdr_in_bio_ref_cz, squeeze=True)
+            luc_in_bio_ref_cz = pos_val_summer(luc_in_bio_ref_cz, squeeze=True)
             ref_bio_warm_loss_cz = pos_val_summer(ref_bio_warm_loss_cz, squeeze=True)
             refugia_ref_cz = pos_val_summer(refugia_ref_cz, squeeze=True)
 
             # calculate regional area "losses" and baseline refugia
-            cdr_in_bio_ref_regs.append(cdr_in_bio_ref_cz)
+            luc_in_bio_ref_regs.append(luc_in_bio_ref_cz)
             ref_bio_warm_loss_regs.append(ref_bio_warm_loss_cz)
             refugia_ref_regs.append(refugia_ref_cz)
 
-        return cdr_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
-            cdr_in_bio_ref_regs, ref_bio_warm_loss_regs, refugia_ref_regs
+        return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
+            luc_in_bio_ref_regs, ref_bio_warm_loss_regs, refugia_ref_regs
 
     # use overlay_calculator
     def process_row(row):
@@ -191,8 +191,8 @@ for model in models:
 
         try:
             # run overlay_calculator for all scenarios to retrieve areas as outputs
-            cdr_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
-                cdr_in_bio_ref_regs, ref_bio_warm_loss_regs, refugia_ref_regs = \
+            luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
+                luc_in_bio_ref_regs, ref_bio_warm_loss_regs, refugia_ref_regs = \
                     overlay_calculator(input_tif,
                                        path,
                                        file_year,
@@ -207,10 +207,10 @@ for model in models:
                 'mitigation_option': mitigation_option,
                 'year': file_year,
                 'refug_ref': refugia_ref_agg,
-                'cdr_in_refug_ref': cdr_in_bio_ref_agg,
+                'luc_in_refug_ref': luc_in_bio_ref_agg,
                 'refug_ref_warm_loss': ref_bio_warm_loss_agg,
                 'refug_ref_reg': refugia_ref_regs,
-                'cdr_in_refug_ref_reg': cdr_in_bio_ref_regs,
+                'luc_in_refug_ref_reg': luc_in_bio_ref_regs,
                 'refug_ref_warm_loss_reg': ref_bio_warm_loss_regs}
 
             return result_dict
@@ -222,10 +222,10 @@ for model in models:
                 'mitigation_option': mitigation_option,
                 'year': file_year,
                 'refug_ref': float('nan'),
-                'cdr_in_refug_ref': float('nan'),
+                'luc_in_refug_ref': float('nan'),
                 'refug_ref_warm_loss': float('nan'),
                 'refug_ref_reg': [float('nan')] * 4,
-                'cdr_in_refug_ref_reg': [float('nan')] * 4,
+                'luc_in_refug_ref_reg': [float('nan')] * 4,
                 'refug_ref_warm_loss_reg': [float('nan')] * 4}
 
     area_df = pd.DataFrame.from_records(lookup_sub_yrs.apply(process_row,
@@ -240,12 +240,12 @@ for model in models:
     area_df = pd.concat([area_df.drop(columns='refug_ref_reg'),
                          cz_columns], axis=1)
 
-    cz_columns = pd.DataFrame(area_df['cdr_in_refug_ref_reg'].to_list(),
-                              columns=['cdr_in_refug_ref_cz1',
-                                       'cdr_in_refug_ref_cz2',
-                                       'cdr_in_refug_ref_cz3',
-                                       'cdr_in_refug_ref_cz4'])
-    area_df = pd.concat([area_df.drop(columns='cdr_in_refug_ref_reg'),
+    cz_columns = pd.DataFrame(area_df['luc_in_refug_ref_reg'].to_list(),
+                              columns=['luc_in_refug_ref_cz1',
+                                       'luc_in_refug_ref_cz2',
+                                       'luc_in_refug_ref_cz3',
+                                       'luc_in_refug_ref_cz4'])
+    area_df = pd.concat([area_df.drop(columns='luc_in_refug_ref_reg'),
                          cz_columns], axis=1)
 
     cz_columns = pd.DataFrame(area_df['refug_ref_warm_loss_reg'].to_list(),
@@ -268,20 +268,20 @@ for model in models:
                                'refug_ref_warm_loss_cz1',
                                'refug_ref_warm_loss_cz2',
                                'refug_ref_warm_loss_cz3',
-                               'refug_ref_warm_loss_cz4'])[['cdr_in_refug_ref',
-                                                            'cdr_in_refug_ref_cz1',
-                                                            'cdr_in_refug_ref_cz2',
-                                                            'cdr_in_refug_ref_cz3',
-                                                            'cdr_in_refug_ref_cz4']].sum()
+                               'refug_ref_warm_loss_cz4'])[['luc_in_refug_ref',
+                                                            'luc_in_refug_ref_cz1',
+                                                            'luc_in_refug_ref_cz2',
+                                                            'luc_in_refug_ref_cz3',
+                                                            'luc_in_refug_ref_cz4']].sum()
     area_df.reset_index(inplace=True)
 
     area_df['warm_loss_perc'] = area_df['refug_ref_warm_loss'] / area_df['refug_ref'] * 100
     for i in range(1, 5):  # calculate warm loss percentages for all climate zones
         area_df[f'warm_loss_perc_cz{i}'] = area_df[f'refug_ref_warm_loss_cz{i}'] / area_df[f'refug_ref_cz{i}'] * 100
 
-    area_df['land_loss_perc'] = area_df['cdr_in_refug_ref'] / area_df['refug_ref'] * 100
+    area_df['land_loss_perc'] = area_df['luc_in_refug_ref'] / area_df['refug_ref'] * 100
     for i in range(1, 5):  # calculate land loss percentages for all climate zones
-        area_df[f'land_loss_perc_cz{i}'] = area_df[f'cdr_in_refug_ref_cz{i}'] / area_df[f'refug_ref_cz{i}'] * 100
+        area_df[f'land_loss_perc_cz{i}'] = area_df[f'luc_in_refug_ref_cz{i}'] / area_df[f'refug_ref_cz{i}'] * 100
 
     area_df['SSP'] = area_df['scenario'].str.split('-').str[0]
     area_df['RCP'] = area_df['scenario'].str.split('-').str[1]
@@ -302,7 +302,7 @@ decline_df['Decline'] = 'True'
 nodecline_df = load_and_concat('area_df_clim_zone_temp_decline_not_allowed', paths)
 nodecline_df['Decline'] = 'False'
 
-area_df = decline_df.copy()  # choose between decline_df and nodecline_df
+area_df = nodecline_df.copy()  # choose between decline_df and nodecline_df
 
 rcps = ['19', '26', '34', '45']  # specify RCPs that shall be plotted
 area_df['RCP'] = area_df['RCP'].astype(str)
@@ -326,7 +326,7 @@ for col_idx, (x_col, y_col) in enumerate(cz_columns):
 
         sns.scatterplot(data=area_df.query(f'Model == "{model}"'), x=x_col,
                         y=y_col, hue='RCP', palette=rcp_palette, style='Year',
-                        s=80, legend=(row_idx == 0 and col_idx == 0), ax=ax)
+                        s=100, alpha=0.7, legend=(row_idx == 0 and col_idx == 0), ax=ax)
 
 for i in range(4):
     for j in range(4):
@@ -410,3 +410,73 @@ fig.supylabel("Today's refugia lost to global warming [%]", x=0.054)
 plt.subplots_adjust(hspace=0.15, wspace=0.15)
 sns.despine()
 plt.show()
+
+# %% spatially-explicit estimation of warming vs luc in SSP2-26
+def warm_vs_luc_calculator(filepath,  # filepath input file
+                           file_year,  # year of input file (string)
+                           file_scenario,  # input file SSP-RCP scenario (string)
+                           biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
+                           lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
+
+    # STEP1: load files for LUC, refugia, and baseline refugia
+    ar_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Afforestation_{file_scenario}_{file_year}.tif',
+                                      masked=True)  # mask nan values for calc
+    be_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Bioenergy_{file_scenario}_{file_year}.tif',
+                                      masked=True)  # mask nan values for calc
+
+    bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
+                                  (bio_select['Scenario'] == file_scenario)][file_year])
+
+    refugia = rioxarray.open_rasterio(path_uea / bio_file,
+                                      masked=True)  # mask nan values for calc
+
+    refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
+                                          masked=True)
+
+    # align files
+    be_file = be_file.rio.reproject_match(ar_file)
+    luc_file = ar_file + be_file
+
+    refugia = refugia.rio.reproject_match(luc_file)
+    refugia_ref = refugia_ref.rio.reproject_match(luc_file)
+
+    # calculate warming and land impact on reference refugia
+    luc_in_bio_ref = luc_file * refugia_ref
+    luc_in_bio_ref.rio.to_raster(filepath / 'luc_in_bio_ref.tif')
+
+    ref_bio_warm_loss = refugia_ref - refugia
+
+    # calculate share of max area for luc_in_bio_ref
+    arbit_input = rioxarray.open_rasterio(filepath / 'luc_in_bio_ref.tif',
+                                          masked=True)
+    bin_land = arbit_input.where(arbit_input.isnull(), 1)  # all=1 if not nodata
+    bin_land.rio.to_raster(filepath / 'bin_land.tif', driver='GTiff')
+
+    land_area_calculation(filepath, 'bin_land.tif', 'max_land_area_km2.tif')
+    max_land_area = rioxarray.open_rasterio(filepath / 'max_land_area_km2.tif',
+                                            masked=True)
+
+    luc_in_bio_ref_rel = luc_in_bio_ref / max_land_area
+
+    luc_in_bio_ref_rel = luc_in_bio_ref_rel.rio.reproject_match(ref_bio_warm_loss)
+
+    comparison = np.zeros_like(refugia_ref, dtype=np.float32)  # initialize result array
+
+    comparison[ref_bio_warm_loss > luc_in_bio_ref_rel] = 1  # raster1 is larger
+    comparison[luc_in_bio_ref_rel > ref_bio_warm_loss] = 2  # raster2 is larger
+    comparison[ref_bio_warm_loss == luc_in_bio_ref_rel] = 3  # values are equal
+
+    result_raster = refugia_ref.copy()
+    result_raster.values = comparison
+
+    result_raster.rio.to_raster(filepath / 'comparison_result.tif')
+
+warm_vs_luc_calculator(path_globiom,
+                       '2100',
+                       'SSP2-26',
+                       'bio1.3_bin.tif',
+                       'GLOBIOM')
+
+# %% comparison of refugia impact at 1.5C before and after overshoot
+
+
