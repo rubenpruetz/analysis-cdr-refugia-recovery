@@ -277,3 +277,27 @@ def cum_cdr_calc(cdr_df):
 def load_and_concat(suffix, paths):
     dfs = [pd.read_csv(_path / f'{i}_{suffix}.csv') for i, _path in paths.items()]
     return pd.concat(dfs, ignore_index=True)
+
+# function to overlay raster and admin boundary shapefile
+def admin_bound_calculator(key, admin_sf, intersect_src):
+    sf = admin_sf
+    shapes = sf.shapes()
+    records = sf.records()
+
+    country_vals = {}
+    for record, shp in zip(records, shapes):  # calc raster vals in polygons
+        country_name = record['iso3']
+        geom = shape(shp.__geo_interface__)
+        # mask the raster with the reprojected geometry
+        out_image, _ = mask(intersect_src, [mapping(geom)], crop=True)
+        out_image = out_image[0]  # extract the first band
+
+        nodata_value = intersect_src.nodata
+        if nodata_value is not None:
+            out_image = np.where(out_image == nodata_value, np.nan, out_image)
+
+        total_value = np.nansum(out_image)  # calc sum without nan values
+        country_vals[country_name] = total_value
+    df = pd.DataFrame(list(country_vals.items()), columns=['iso3', 'km2'])
+    df['key'] = key
+    return df[['key', 'iso3', 'km2']].copy()
