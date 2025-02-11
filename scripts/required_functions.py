@@ -11,6 +11,7 @@ import seaborn as sns
 from rasterio.mask import mask
 from shapely.geometry import shape, mapping
 from pathlib import Path
+path_uea = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
 
 # function to resample geotiffs
 def tiff_resampler(input_tif,  # input tiff (string)
@@ -301,3 +302,78 @@ def admin_bound_calculator(key, admin_sf, intersect_src):
     df = pd.DataFrame(list(country_vals.items()), columns=['iso3', 'km2'])
     df['key'] = key
     return df[['key', 'iso3', 'km2']].copy()
+
+# function to interpolate available land cover years to a certain target year
+def land_cover_interpolator(model,
+                            filepath,
+                            land_cover,
+                            scenario,
+                            yr_low,  # closest available year before target
+                            yr_up,  # closest available year after target
+                            yr_target):  # year that shall be returned
+
+    lower_tiff = f'{model}_{land_cover}_{scenario}_{yr_low}.tif'
+    upper_tiff = f'{model}_{land_cover}_{scenario}_{yr_up}.tif'
+    output_name = f'{model}_{land_cover}_{scenario}_{yr_target}.tif'
+
+    with rs.open(filepath / lower_tiff) as src_low:
+        with rs.open(filepath / upper_tiff) as src_up:
+            # read raster data and geospatial information
+            lower_tiff = src_low.read(1)
+            upper_tiff = src_up.read(1)
+            profile_lower = src_low.profile
+
+            yr_diff = yr_up - yr_low  # diff of known years
+            tiff_diff = upper_tiff - lower_tiff  # diff of known tiffs
+
+            # lower tiff plus the fraction of tiff_diff for a given target yr
+            tiff_target = lower_tiff + (tiff_diff * ((yr_target - yr_low) / yr_diff))
+
+            profile_updated = profile_lower.copy()
+            profile_updated.update(dtype=rs.float32)
+
+            with rs.open(filepath / output_name, "w", **profile_updated) as dst:
+                dst.write(tiff_target.astype(rs.float32), 1)
+
+# function compare impact on refugia before and after overshoot of 1.5C
+def os_land_in_refugia_calculator(model,
+                                  filepath,
+                                  scenario,
+                                  pre_os_yr,  # specify file for start of overshoot
+                                  post_os_yr):  # specify file for end of overshoot
+
+    pre_os_ar = f'{model}_Afforestation_{scenario}_{pre_os_yr}.tif'
+    post_os_ar = f'{model}_Afforestation_{scenario}_{post_os_yr}.tif'
+    pre_os_be = f'{model}_Bioenergy_{scenario}_{pre_os_yr}.tif'
+    post_os_be = f'{model}_Bioenergy_{scenario}_{post_os_yr}.tif'
+
+    pre_os_ar = rioxarray.open_rasterio(filepath / pre_os_ar, masked=True)
+    post_os_ar = rioxarray.open_rasterio(filepath / post_os_ar, masked=True)
+    pre_os_be = rioxarray.open_rasterio(filepath / pre_os_be, masked=True)
+    post_os_be = rioxarray.open_rasterio(filepath / post_os_be, masked=True)
+    refugia = rioxarray.open_rasterio(path_uea / 'bio1.5_bin.tif', masked=True)
+
+    # align files
+    pre_os_ar = pre_os_ar.rio.reproject_match(refugia)
+    post_os_ar = post_os_ar.rio.reproject_match(refugia)
+    pre_os_be = pre_os_be.rio.reproject_match(refugia)
+    post_os_be = post_os_be.rio.reproject_match(refugia)
+
+    # calculate combined mitigation within refugia for pre and post os
+    pre_os = (pre_os_ar + pre_os_be) * refugia
+    post_os = (post_os_ar + post_os_be) * refugia
+
+    # calculate absolute change between start end end of overshoot
+    os_diff = post_os - pre_os   # positive numbers mean larger post os effect
+
+    # calculate potential maximum area for diff file as input for relative change
+    os_diff_bin = os_diff.where(os_diff.isnull(), 1)  # all=1 if not nodata
+    os_diff_bin.rio.to_raster(filepath / 'os_diff_bin.tif', driver='GTiff')
+    land_area_calculation(filepath, 'os_diff_bin.tif', 'os_diff_bin_max.tif')
+    os_diff_max = rioxarray.open_rasterio(filepath / 'os_diff_bin_max.tif',
+                                          masked=True)
+    os_rel_change = (os_diff / os_diff_max) * 100
+
+    # save file
+    os_rel_change.rio.to_raster(filepath / f'{model}_{scenario}_pre_vs_post_os.tif')
+
