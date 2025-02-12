@@ -570,7 +570,56 @@ for mitigation_option in mitigation_options:
     land_cover_interpolator('AIM', path_aim, mitigation_option,
                             'SSP2-26', 2090, 2100, 2098)
 
-# estimate land impact on refugia before and after ovreshoot
+# estimate land impact on refugia before and after overshoot
 os_land_in_refugia_calculator('GLOBIOM', path_globiom, 'SSP1-19', 2035, 2069)
 os_land_in_refugia_calculator('AIM', path_aim, 'SSP2-26', 2035, 2098)
 
+# plot difference in land impact on refugia before and after overshoot
+os_scenarios = ['GLOBIOM SSP1-19', 'AIM SSP2-26']
+
+for scenario in os_scenarios:
+    if scenario == 'GLOBIOM SSP1-19':
+        path = path_globiom
+        os_file = 'GLOBIOM_SSP1-19_pre_vs_post_os.tif'
+    elif scenario == 'AIM SSP2-26':
+        path = path_aim
+        os_file = 'AIM_SSP2-26_pre_vs_post_os.tif'
+
+    os_diff = rs.open(path / os_file)
+    refug = rs.open(path_uea / 'bio1.8_bin.tif')
+    
+    data_os_diff = os_diff.read(1)
+    data_refug = refug.read(1)
+    
+    data_os_diff[data_os_diff == 0] = np.nan  # ignore zero values
+    
+    # get the metadata
+    transform = os_diff.transform
+    extent_os = [transform[2], transform[2] + transform[0] * os_diff.width,
+                 transform[5] + transform[4] * os_diff.height, transform[5]]
+    
+    transform = refug.transform
+    extent_refug = [transform[2], transform[2] + transform[0] * refug.width,
+                    transform[5] + transform[4] * refug.height, transform[5]]
+    
+    bounds_os = [-40, -20, -1, 1, 20, 40]
+    norm_os = mpl.colors.BoundaryNorm(bounds_os, mpl.cm.PuOr.N, extend='both')
+    
+    fig = plt.figure(figsize=(10, 6.1))
+    ax = fig.add_subplot(1, 1, 1, projection=ccrs.LambertAzimuthalEqualArea())  # choose projection | LambertAzimuthalEqualArea())
+    
+    img_re = ax.imshow(data_refug, extent=extent_refug, transform=ccrs.PlateCarree(),
+                       origin='upper', cmap='Greys', alpha=0.1)
+    
+    img_os = ax.imshow(data_os_diff, extent=extent_os, transform=ccrs.PlateCarree(),
+                       origin='upper', cmap='PuOr', norm=norm_os, alpha=1)
+    
+    ax.coastlines(linewidth=0.2)
+    
+    cbar_os = plt.colorbar(img_os, ax=ax, orientation='horizontal', aspect=13, pad=0.16)
+    cbar_os.ax.set_position([0.41, -0.165, 0.2, 0.501])
+    cbar_os.ax.tick_params(labelsize=7)
+    cbar_os.set_label('Difference in land-based mitigation within refugia at 1.5 °C\n(post- vs. pre-overshoot) [% cell area]',
+                      labelpad=1, fontsize=8)
+    plt.title(f'{scenario}', fontsize=8, ha='center')
+    plt.show()
