@@ -23,7 +23,6 @@ path_globiom = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodivers
 path_aim = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/aim_maps')
 path_image = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/image_maps')
 path_gcam = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/gcam_maps')
-path_cz = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/koppen_geiger_maps/1991_2020')
 path_ar6_data = Path('/Users/rpruetz/Documents/phd/datasets')
 
 ar6_db = pd.read_csv(path_ar6_data / 'AR6_Scenarios_Database_World_v1.1.csv')
@@ -76,22 +75,10 @@ bio_select.replace({'Model': {'AIM/CGE 2.0': 'AIM',
                               'GCAM 4.2': 'GCAM',
                               'IMAGE 3.0.1': 'IMAGE'}}, inplace=True)
 
-# %% specify years for the analysis
+# specify years for the analysis
 years = ['2030', '2050', '2080', '2100']
 lookup_sub_yrs = lookup_mi_luc_df.copy()
 lookup_sub_yrs = lookup_sub_yrs.loc[lookup_sub_yrs['year'].isin(years)]
-
-# load climate zone files
-cz1 = rioxarray.open_rasterio(path_cz / 'clim_zon_class1.tif', masked=True)
-cz2 = rioxarray.open_rasterio(path_cz / 'clim_zon_class2.tif', masked=True)
-cz3 = rioxarray.open_rasterio(path_cz / 'clim_zon_class3.tif', masked=True)
-cz4 = rioxarray.open_rasterio(path_cz / 'clim_zon_class4.tif', masked=True)
-cz5 = rioxarray.open_rasterio(path_cz / 'clim_zon_class5.tif', masked=True)
-
-cz4 = cz4.rio.reproject_match(cz5)  # ensure consistent match
-cz45 = cz4 + cz5  # combine cold and polar zones to one
-cz45.rio.to_raster(path_cz / 'clim_zon_class45.tif', driver='GTiff')
-cz4 = rioxarray.open_rasterio(path_cz / 'clim_zon_class45.tif', masked=True)
 
 # %% choose model to run the script with
 models = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE']
@@ -149,41 +136,7 @@ for model in models:
         ref_bio_warm_loss_agg = pos_val_summer(ref_bio_warm_loss_a, squeeze=True)
         refugia_ref_agg = pos_val_summer(refugia_ref_a, squeeze=True)
 
-        # calculate warming and land impact on reference refugia (regional)
-        luc_in_bio_ref_regs = []
-        ref_bio_warm_loss_regs = []
-        refugia_ref_regs = []
-
-        cz_values = [cz1, cz2, cz3, cz4]
-
-        for cz in cz_values:
-            cz_m = cz.rio.reproject_match(land_use)  # ensure consistent match
-            luc_in_bio_ref_cz = (land_use * refugia_ref) * cz_m
-
-            ref_bio_warm_loss_cz = (refugia_ref - refugia) * cz_m
-            ref_bio_warm_loss_cz.rio.to_raster(path_uea /
-                                               'ref_bio_warm_loss_cz_temp.tif',
-                                               driver='GTiff')
-            ref_bio_warm_loss_cz = land_area_calculation(path_uea,
-                                                         'ref_bio_warm_loss_cz_temp.tif')
-
-            refugia_ref_cz = refugia_ref * cz_m
-            refugia_ref_cz.rio.to_raster(path_uea / 'refugia_ref_cz_temp.tif',
-                                         driver='GTiff')
-            refugia_ref_cz = land_area_calculation(path_uea,
-                                                   'refugia_ref_cz_temp.tif')
-
-            luc_in_bio_ref_cz = pos_val_summer(luc_in_bio_ref_cz, squeeze=True)
-            ref_bio_warm_loss_cz = pos_val_summer(ref_bio_warm_loss_cz, squeeze=True)
-            refugia_ref_cz = pos_val_summer(refugia_ref_cz, squeeze=True)
-
-            # calculate regional area "losses" and baseline refugia
-            luc_in_bio_ref_regs.append(luc_in_bio_ref_cz)
-            ref_bio_warm_loss_regs.append(ref_bio_warm_loss_cz)
-            refugia_ref_regs.append(refugia_ref_cz)
-
-        return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
-            luc_in_bio_ref_regs, ref_bio_warm_loss_regs, refugia_ref_regs
+        return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg
 
     # use overlay_calculator
     def process_row(row):
@@ -194,15 +147,14 @@ for model in models:
 
         try:
             # run overlay_calculator for all scenarios to retrieve areas as outputs
-            luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
-                luc_in_bio_ref_regs, ref_bio_warm_loss_regs, refugia_ref_regs = \
-                    overlay_calculator(input_tif,
-                                       path,
-                                       file_year,
-                                       file_scenario,
-                                       mitigation_option,
-                                       'bio1.3_bin.tif',
-                                       model)
+            luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg = \
+                overlay_calculator(input_tif,
+                                   path,
+                                   file_year,
+                                   file_scenario,
+                                   mitigation_option,
+                                   'bio1.3_bin.tif',
+                                   model)
 
             # create a dictionary with the calculated values
             result_dict = {
@@ -211,10 +163,7 @@ for model in models:
                 'year': file_year,
                 'refug_ref': refugia_ref_agg,
                 'luc_in_refug_ref': luc_in_bio_ref_agg,
-                'refug_ref_warm_loss': ref_bio_warm_loss_agg,
-                'refug_ref_reg': refugia_ref_regs,
-                'luc_in_refug_ref_reg': luc_in_bio_ref_regs,
-                'refug_ref_warm_loss_reg': ref_bio_warm_loss_regs}
+                'refug_ref_warm_loss': ref_bio_warm_loss_agg}
 
             return result_dict
 
@@ -226,65 +175,21 @@ for model in models:
                 'year': file_year,
                 'refug_ref': float('nan'),
                 'luc_in_refug_ref': float('nan'),
-                'refug_ref_warm_loss': float('nan'),
-                'refug_ref_reg': [float('nan')] * 4,
-                'luc_in_refug_ref_reg': [float('nan')] * 4,
-                'refug_ref_warm_loss_reg': [float('nan')] * 4}
+                'refug_ref_warm_loss': float('nan')}
 
     area_df = pd.DataFrame.from_records(lookup_sub_yrs.apply(process_row,
                                                              axis=1).values)
     area_df = area_df.reset_index(drop=True)
 
-    cz_columns = pd.DataFrame(area_df['refug_ref_reg'].to_list(),
-                              columns=['refug_ref_cz1',
-                                       'refug_ref_cz2',
-                                       'refug_ref_cz3',
-                                       'refug_ref_cz4'])
-    area_df = pd.concat([area_df.drop(columns='refug_ref_reg'),
-                         cz_columns], axis=1)
-
-    cz_columns = pd.DataFrame(area_df['luc_in_refug_ref_reg'].to_list(),
-                              columns=['luc_in_refug_ref_cz1',
-                                       'luc_in_refug_ref_cz2',
-                                       'luc_in_refug_ref_cz3',
-                                       'luc_in_refug_ref_cz4'])
-    area_df = pd.concat([area_df.drop(columns='luc_in_refug_ref_reg'),
-                         cz_columns], axis=1)
-
-    cz_columns = pd.DataFrame(area_df['refug_ref_warm_loss_reg'].to_list(),
-                              columns=['refug_ref_warm_loss_cz1',
-                                       'refug_ref_warm_loss_cz2',
-                                       'refug_ref_warm_loss_cz3',
-                                       'refug_ref_warm_loss_cz4'])
-    area_df = pd.concat([area_df.drop(columns='refug_ref_warm_loss_reg'),
-                         cz_columns], axis=1)
-
     # preprocess df for plotting
     area_df = area_df.groupby(['scenario',
                                'year',
                                'refug_ref',
-                               'refug_ref_cz1',
-                               'refug_ref_cz2',
-                               'refug_ref_cz3',
-                               'refug_ref_cz4',
-                               'refug_ref_warm_loss',
-                               'refug_ref_warm_loss_cz1',
-                               'refug_ref_warm_loss_cz2',
-                               'refug_ref_warm_loss_cz3',
-                               'refug_ref_warm_loss_cz4'])[['luc_in_refug_ref',
-                                                            'luc_in_refug_ref_cz1',
-                                                            'luc_in_refug_ref_cz2',
-                                                            'luc_in_refug_ref_cz3',
-                                                            'luc_in_refug_ref_cz4']].sum()
+                               'refug_ref_warm_loss'])[['luc_in_refug_ref']].sum()
     area_df.reset_index(inplace=True)
 
     area_df['warm_loss_perc'] = area_df['refug_ref_warm_loss'] / area_df['refug_ref'] * 100
-    for i in range(1, 5):  # calculate warm loss percentages for all climate zones
-        area_df[f'warm_loss_perc_cz{i}'] = area_df[f'refug_ref_warm_loss_cz{i}'] / area_df[f'refug_ref_cz{i}'] * 100
-
     area_df['land_loss_perc'] = area_df['luc_in_refug_ref'] / area_df['refug_ref'] * 100
-    for i in range(1, 5):  # calculate land loss percentages for all climate zones
-        area_df[f'land_loss_perc_cz{i}'] = area_df[f'luc_in_refug_ref_cz{i}'] / area_df[f'refug_ref_cz{i}'] * 100
 
     area_df['SSP'] = area_df['scenario'].str.split('-').str[0]
     area_df['RCP'] = area_df['scenario'].str.split('-').str[1]
@@ -304,69 +209,6 @@ decline_df = load_and_concat('area_df_clim_zone_temp_decline_allowed', paths)
 decline_df['Decline'] = 'True'
 nodecline_df = load_and_concat('area_df_clim_zone_temp_decline_not_allowed', paths)
 nodecline_df['Decline'] = 'False'
-
-area_df = nodecline_df.copy()  # choose between decline_df and nodecline_df
-
-rcps = ['19', '26', '34', '45']  # specify RCPs that shall be plotted
-area_df['RCP'] = area_df['RCP'].astype(str)
-area_df = area_df.loc[area_df['RCP'].isin(rcps)]
-area_df = area_df.loc[area_df['SSP'].isin(['SSP2'])]
-
-rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320',
-               '45': '#e71d24', '60': '#951b1d', 'Baseline': 'dimgrey'}
-
-fig, axes = plt.subplots(4, 4, figsize=(11, 6), sharex=True, sharey=True)
-
-models = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE']
-cz_columns = [(f'land_loss_perc_cz{i}', f'warm_loss_perc_cz{i}') for i in range(1, 5)]
-
-for col_idx, (x_col, y_col) in enumerate(cz_columns):
-    for row_idx, model in enumerate(models):
-        ax = axes[row_idx, col_idx]
-
-        sns.lineplot(data=area_df.query(f'Model == "{model}"'), x=x_col, y=y_col,
-                     hue='RCP', palette=rcp_palette, legend=False, ax=ax)
-
-        sns.scatterplot(data=area_df.query(f'Model == "{model}"'), x=x_col,
-                        y=y_col, hue='RCP', palette=rcp_palette, style='Year',
-                        s=100, alpha=0.7, legend=(row_idx == 0 and col_idx == 0), ax=ax)
-
-for i in range(4):
-    for j in range(4):
-        axes[i, j].plot([0, 30], [0, 30], linestyle='--', color='grey')
-
-axes[0, 0].legend(bbox_to_anchor=(-0.05, 1.7), loc='upper left', ncols=12,
-                  columnspacing=0.8, handletextpad=0.1)
-
-axes[0, 0].set_title('Tropical')
-axes[0, 1].set_title('Arid')
-axes[0, 2].set_title('Temperate')
-axes[0, 3].set_title('Cold & Polar')
-
-plt.xlim(-1, 26)
-plt.ylim(-5, 100)
-plt.xticks([0, 13, 26])
-
-axes[3, 0].set_xlabel('')
-axes[3, 1].set_xlabel('')
-axes[3, 2].set_xlabel('')
-axes[3, 3].set_xlabel('')
-
-axes[0, 0].set_ylabel('AIM')
-axes[1, 0].set_ylabel('GCAM')
-axes[2, 0].set_ylabel('GLOBIOM')
-axes[3, 0].set_ylabel('IMAGE')
-
-fig.supxlabel("Today's refugia lost to afforestation & bioenergy plantations (combined effect assuming all negative) [%]",
-              x=0.51, y=0.03)
-fig.supylabel("Today's refugia lost to global warming [%]", x=0.054)
-
-plt.subplots_adjust(hspace=0.15)
-plt.subplots_adjust(wspace=0.15)
-sns.despine()
-plt.show()
-
-# %% plot global values across models and recovery assumptions
 area_df = pd.concat([decline_df, nodecline_df])
 
 rcps = ['19', '26', '34', '45']  # specify RCPs that shall be plotted
@@ -375,6 +217,9 @@ area_df = area_df.loc[area_df['RCP'].isin(rcps)]
 area_df = area_df.loc[area_df['SSP'].isin(['SSP2'])]
 decline_conditions = ['False', 'True']
 decline_labels = ['No recovery', 'Full recovery']
+
+rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320',
+               '45': '#e71d24', '60': '#951b1d', 'Baseline': 'dimgrey'}
 
 fig, axes = plt.subplots(2, 4, figsize=(11, 6), sharex=True, sharey=True)
 
