@@ -537,8 +537,9 @@ os_plot_df = pd.melt(os_plot_df, id_vars=['Model', 'Scenario'], var_name='Year',
 os_plot_df['ModScen'] = os_plot_df['Model'] + ' ' + os_plot_df['Scenario']
 os_plot_df['Year'] = os_plot_df['Year'].astype(int)
 
+# plot illustrative figure about overshoot period in selected scenarios
 scen_pal = {'GLOBIOM SSP1-19': 'mediumvioletred', 'AIM SSP2-26': 'cornflowerblue'}
-plt.figure(figsize=(4, 4))
+plt.figure(figsize=(7, 3))
 plt.plot([2020, 2100], [1.5, 1.5], linewidth=1, linestyle='--', color='grey')
 plt.plot([2035, 2035], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
 plt.plot([2069, 2069], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
