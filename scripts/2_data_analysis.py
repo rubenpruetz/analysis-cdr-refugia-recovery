@@ -432,7 +432,7 @@ for scenario in os_scenarios:
         os_file = 'AIM_SSP2-26_pre_vs_post_os.tif'
 
     os_diff = rs.open(path / os_file)
-    refug = rs.open(path_uea / 'bio1.8_bin.tif')
+    refug = rs.open(path_uea / 'bio1.5_bin.tif')
     
     data_os_diff = os_diff.read(1)
     data_refug = refug.read(1)
