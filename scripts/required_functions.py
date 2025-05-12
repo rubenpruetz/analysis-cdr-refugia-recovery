@@ -335,7 +335,7 @@ def land_cover_interpolator(model,
             with rs.open(filepath / output_name, "w", **profile_updated) as dst:
                 dst.write(tiff_target.astype(rs.float32), 1)
 
-# function compare impact on refugia before and after overshoot of 1.5C
+# function to compare impact on refugia before and after overshoot of 1.5C
 def os_land_in_refugia_calculator(model,
                                   filepath,
                                   scenario,
@@ -351,7 +351,8 @@ def os_land_in_refugia_calculator(model,
     post_os_ar = rioxarray.open_rasterio(filepath / post_os_ar, masked=True)
     pre_os_be = rioxarray.open_rasterio(filepath / pre_os_be, masked=True)
     post_os_be = rioxarray.open_rasterio(filepath / post_os_be, masked=True)
-    refugia = rioxarray.open_rasterio(path_uea / 'bio1.5_bin.tif', masked=True)
+    refugia = rioxarray.open_rasterio(path_uea / 'bio1.5_bin.tif',
+                                      masked=True)  # adjust file if needed
 
     # align files
     pre_os_ar = pre_os_ar.rio.reproject_match(refugia)

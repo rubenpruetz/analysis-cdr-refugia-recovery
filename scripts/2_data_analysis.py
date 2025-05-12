@@ -416,7 +416,7 @@ for mitigation_option in mitigation_options:
     land_cover_interpolator('AIM', path_aim, mitigation_option,
                             'SSP2-26', 2090, 2100, 2098)
 
-# estimate land impact on refugia before and after overshoot
+# estimate land impact on 1.5 °C-refugia before and after overshoot
 os_land_in_refugia_calculator('GLOBIOM', path_globiom, 'SSP1-19', 2035, 2069)
 os_land_in_refugia_calculator('AIM', path_aim, 'SSP2-26', 2035, 2098)
 
@@ -469,3 +469,17 @@ for scenario in os_scenarios:
                       labelpad=1, fontsize=8)
     plt.title(f'{scenario}', fontsize=8, ha='center')
     plt.show()
+    
+# calculate share of 1.5 °C climate refugia that would be lost at 1.6 °C
+refugia1p5 = rioxarray.open_rasterio(path_uea / 'bio1.5_bin.tif', masked=True)
+refugia1p6 = rioxarray.open_rasterio(path_uea / 'bio1.6_bin.tif', masked=True)
+
+bio_warm_loss = refugia1p5 - refugia1p6
+bio_warm_loss.rio.to_raster(path_uea / 'warm_loss1.6-1.5.tif', driver='GTiff')
+lost_ref = land_area_calculation(path_uea, 'warm_loss1.6-1.5.tif')
+refug1p5 = land_area_calculation(path_uea, 'bio1.5_bin.tif')
+
+lost_ref = pos_val_summer(lost_ref, squeeze=True)
+refug1p5 = pos_val_summer(refug1p5, squeeze=True)
+lost_share = (lost_ref / refug1p5) * 100
+print(lost_share)
