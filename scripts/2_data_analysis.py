@@ -228,7 +228,7 @@ for i, decline in enumerate(decline_conditions):
 
         data = area_df.query(f'Model == "{model}" & Decline == "{decline}"')
 
-        sns.lineplot(data=data, x='land_loss_perc', y='warm_loss_perc', hue='RCP',
+        sns.lineplot(data=data, x='land_loss_perc', y='warm_loss_perc', hue='RCP', sort=False,
                      palette=rcp_palette, legend=False, ax=axes[i, j])
         sns.scatterplot(data=data, x='land_loss_perc', y='warm_loss_perc', hue='RCP',
                         palette=rcp_palette, style='Year', s=100, alpha=0.7,
@@ -337,8 +337,8 @@ def warm_vs_luc_plotter(filepath,  # filepath input file
         mpatches.Patch(color='mediumblue', label='More LUC-related loss'),
         mpatches.Patch(color='grey', label='No or even loss')]
 
-    ax.legend(bbox_to_anchor=(0.175, -0.1), handles=legend_patches, ncols=4,
-              loc='lower left', fontsize=8.5, columnspacing=0.8, handletextpad=0.5,
+    ax.legend(bbox_to_anchor=(0.077, -0.12), handles=legend_patches, ncols=4,
+              loc='lower left', fontsize=11, columnspacing=0.8, handletextpad=0.5,
               frameon=True)
 
     plt.title(f'{lu_model} {file_scenario} {file_year} \n{recovery}',
