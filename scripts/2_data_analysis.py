@@ -11,7 +11,9 @@ import rasterio as rs
 from time import time
 import cartopy.crs as ccrs
 from cartopy.io.shapereader import Reader
-import cmasher as cmr
+from shapely.geometry import shape
+import cartopy.feature as cfeature
+from matplotlib.patches import Patch
 from required_functions import *
 import shapefile
 from pathlib import Path
@@ -161,7 +163,6 @@ for model in models:
     print(f'Runtime {(end - start) /60} min')
 
 # %% plot warming versus land use change impact on refugia
-
 paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom, 'IMAGE': path_image}
 decline_df = load_and_concat('area_df_clim_zone_temp_decline_allowed', paths)
 decline_df['Decline'] = 'True'
@@ -299,7 +300,75 @@ for file_year in file_years:
     plt.show()
 
 # %% bivariate maps of warming vs LUC at country level per model (SSP2-26 2100)
+land_area_calculation(path_uea, 'bio1.3_bin.tif', 'bio1.3_bin_a.tif')
+refug_ref = rs.open(path_uea / 'bio1.3_bin_a.tif', masked=True)
+is03_refug_ref = admin_bound_calculator('iso3_refug_ref', admin_sf, refug_ref)
+is03_refug_ref = is03_refug_ref.rename(columns={'km2': 'km2_ref'})
+loss_dfs = pd.merge(loss_dfs, is03_refug_ref, on='iso3')
+loss_dfs['warm_loss_perc'] = (loss_dfs['km2_warm'] / loss_dfs['km2_ref']) * 100
+loss_dfs['luc_loss_perc'] = (loss_dfs['km2_luc'] / loss_dfs['km2_ref']) * 100
+loss_dfs = loss_dfs[['model', 'iso3', 'warm_loss_perc', 'luc_loss_perc']].copy()
 
+for model in models:
+    bivar_map = loss_dfs.query('model == @model').reset_index()
+    bivar_map = bivar_map.dropna(subset=['warm_loss_perc', 'luc_loss_perc']).copy()
+
+    def classify(series, bins=[0, 33, 66, 100]):
+        return pd.cut(series, bins=bins, labels=False, include_lowest=True)
+
+    bivar_map['luc_bin'] = classify(bivar_map['luc_loss_perc'])  # x-axis
+    bivar_map['warm_bin'] = classify(bivar_map['warm_loss_perc'])  # y-axis
+    bivar_map['bivar_class'] = bivar_map['warm_bin'] * 3 + bivar_map['luc_bin']  # row * ncol + col
+
+    color_matrix = [['#cf0523', '#7d0323', '#150024'],
+                    ['#d18792', '#7e5194', '#160e97'],
+                    ['#d3d3d3', '#7f7fd7', '#1616da']]
+
+    flat_colors = [color_matrix[row][col] for row in range(3) for col in range(3)]
+
+    color_map = bivar_map.set_index('iso3')['bivar_class'].to_dict()
+
+    fig = plt.figure(figsize=(11, 6))
+    ax = plt.axes([0.05, 0.05, 0.7, 0.9], projection=ccrs.Robinson())
+    ax.set_global()
+    ax.coastlines()
+    ax.add_feature(cfeature.BORDERS, linewidth=0.2)
+
+    for sr in admin_sf.shapeRecords():
+        iso = sr.record['iso3']
+        geom = shape(sr.shape.__geo_interface__)
+        if not geom.is_valid:
+            continue
+        try:
+            color_idx = color_map[iso]
+            row = color_idx // 3
+            col = color_idx % 3
+            facecolor = color_matrix[2 - row][col]
+        except KeyError:
+            facecolor = '#dddddd'
+        ax.add_geometries([geom], ccrs.PlateCarree(),
+                          facecolor=facecolor, edgecolor='black', linewidth=0.2)
+
+    # plot legend
+    legend_ax = fig.add_axes([0.13, 0.27, 0.13, 0.13])
+    for row in range(3):
+        for col in range(3):
+            color = color_matrix[2 - row][col]
+            legend_ax.add_patch(plt.Rectangle((col, row), 1, 1, facecolor=color))
+
+    legend_ax.set_yticks([0.5, 1.5, 2.5])
+    legend_ax.set_xticklabels(['', '', ''])
+    legend_ax.set_yticklabels(['33', '66', '100'])
+    legend_ax.set_title('Refugia loss (%)', fontsize=10)
+    legend_ax.set_xlabel('LUC', fontsize=10)
+    legend_ax.set_ylabel('Warming', fontsize=10)
+    legend_ax.tick_params(axis='both', which='both', length=0)
+    legend_ax.set_xlim(0, 3)
+    legend_ax.set_ylim(0, 3)
+    legend_ax.set_aspect('equal')
+    legend_ax.spines[:].set_visible(False)
+    fig.text(0.07, 0.47, f'{model} SSP2-26 2100\n{recovery}', fontsize=10)
+    plt.show()
 
 # %% comparison of refugia impact at 1.5C before and after overshoot
 os_df = ar6_data.copy()
