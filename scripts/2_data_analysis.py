@@ -287,16 +287,16 @@ for file_year in file_years:
     ax.coastlines(linewidth=0.2)
 
     legend_patches = [
-        mpatches.Patch(color='crimson', label='More warming-related loss'),
-        mpatches.Patch(color='mediumblue', label='More LUC-related loss'),
+        mpatches.Patch(color='crimson', label='More warm. loss'),
+        mpatches.Patch(color='mediumblue', label='More LUC loss'),
         mpatches.Patch(color='gainsboro', label='No agreement')]
 
-    ax.legend(bbox_to_anchor=(0.01, -0.12), handles=legend_patches, ncols=4,
-              loc='lower left', fontsize=13, columnspacing=0.8, handletextpad=0.5,
-              frameon=True)
+    ax.legend(bbox_to_anchor=(0.01, 0.32), handles=legend_patches, ncols=1,
+              loc='lower left', fontsize=12, columnspacing=0.8, handletextpad=0.5,
+              frameon=False)
 
-    plt.title(f'{file_scenario} {file_year} \n{recovery}', fontsize=13, x=0.05,
-              y=0.27, ha='left')
+    plt.title(f'Agreement {file_scenario} {file_year} \n{recovery}', fontsize=12, 
+              x=0.375, y=0.125, ha='left')
     plt.show()
 
 # %% bivariate maps of warming vs LUC at country level per model (SSP2-26 2100)
@@ -313,7 +313,7 @@ for model in models:
     bivar_map = loss_dfs.query('model == @model').reset_index()
     bivar_map = bivar_map.dropna(subset=['warm_loss_perc', 'luc_loss_perc']).copy()
 
-    def classify(series, bins=[0, 33, 66, 100]):
+    def classify(series, bins=[0, 25, 50, 100]):
         return pd.cut(series, bins=bins, labels=False, include_lowest=True)
 
     bivar_map['luc_bin'] = classify(bivar_map['luc_loss_perc'])  # x-axis
@@ -350,7 +350,7 @@ for model in models:
                           facecolor=facecolor, edgecolor='black', linewidth=0.2)
 
     # plot legend
-    legend_ax = fig.add_axes([0.13, 0.27, 0.13, 0.13])
+    legend_ax = fig.add_axes([0.105, 0.375, 0.16, 0.16])
     for row in range(3):
         for col in range(3):
             color = color_matrix[2 - row][col]
@@ -358,16 +358,15 @@ for model in models:
 
     legend_ax.set_yticks([0.5, 1.5, 2.5])
     legend_ax.set_xticklabels(['', '', ''])
-    legend_ax.set_yticklabels(['33', '66', '100'])
-    legend_ax.set_title('Refugia loss (%)', fontsize=10)
-    legend_ax.set_xlabel('LUC', fontsize=10)
-    legend_ax.set_ylabel('Warming', fontsize=10)
+    legend_ax.set_yticklabels(['25%', '50%', '100%'], fontsize=12)
+    legend_ax.set_xlabel('LUC loss', fontsize=12)
+    legend_ax.set_ylabel('Warm. loss', fontsize=12)
     legend_ax.tick_params(axis='both', which='both', length=0)
     legend_ax.set_xlim(0, 3)
     legend_ax.set_ylim(0, 3)
     legend_ax.set_aspect('equal')
     legend_ax.spines[:].set_visible(False)
-    fig.text(0.07, 0.47, f'{model} SSP2-26 2100\n{recovery}', fontsize=10)
+    fig.text(0.313, 0.27, f'{model} SSP2-26 2100\n{recovery}', fontsize=12)
     plt.show()
 
 # %% comparison of refugia impact at 1.5C before and after overshoot
