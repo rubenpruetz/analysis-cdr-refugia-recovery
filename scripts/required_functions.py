@@ -103,18 +103,50 @@ def land_area_calculation(filepath, input_name, output_name=None):
     else:
         return areagrid
 
-# sum cells in array that are positive (squeeze removes non-required dims)
-def pos_val_summer(arr, squeeze=True):
-    if squeeze:
-        arr = np.squeeze(arr)
+# function to overlay biodiversity and mitigation maps
+def overlay_calculator(input_tif,  # land use model input file (string)
+                       filepath,  # filepath input file
+                       file_year,  # year of input file (string)
+                       bio_select,  # defined in the analysis script
+                       file_scenario,  # input file SSP-RCP scenario (string)
+                       mitigation_option,  # 'Afforestation' or 'Bioenergy'
+                       biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
+                       lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
 
-    arr = np.clip(arr, 0, None)  # Set values below zero to 0
-    return np.nansum(arr)  # Sum only non-NaN values
+    # STEP1: load files for LUC, refugia, and baseline refugia
+    land_use = rioxarray.open_rasterio(filepath / f'{lu_model}_{input_tif}',
+                                       masked=True)  # mask nan values for calc
 
-# function to concat multiple dfs across models
-def load_and_concat(suffix, paths):
-    dfs = [pd.read_csv(_path / f'{i}_{suffix}.csv') for i, _path in paths.items()]
-    return pd.concat(dfs, ignore_index=True)
+    bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
+                                       (bio_select['Scenario'] == file_scenario)][file_year])
+
+    refugia = rioxarray.open_rasterio(path_uea / bio_file,
+                                      masked=True)  # mask nan values for calc
+
+    refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
+                                          masked=True)
+
+    # align files
+    refugia = refugia.rio.reproject_match(land_use)
+    refugia_ref = refugia_ref.rio.reproject_match(land_use)
+
+    # calculate warming and land impact on reference refugia (global)
+    luc_in_bio_ref = land_use * refugia_ref
+    ref_bio_warm_loss = refugia_ref - refugia
+    ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss_temp.tif',
+                                    driver='GTiff')
+
+    # calculate refugia extents
+    ref_bio_warm_loss_a = land_area_calculation(path_uea,
+                                                'ref_bio_warm_loss_temp.tif')
+    refugia_ref_a = land_area_calculation(path_uea, biodiv_ref_warm_file)
+
+    # calculate aggregated area "losses" and baseline refugia
+    luc_in_bio_ref_agg = pos_val_summer(luc_in_bio_ref, squeeze=True)
+    ref_bio_warm_loss_agg = pos_val_summer(ref_bio_warm_loss_a, squeeze=True)
+    refugia_ref_agg = pos_val_summer(refugia_ref_a, squeeze=True)
+
+    return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg
 
 # function to overlay raster and admin boundary shapefile
 def admin_bound_calculator(key, admin_sf, intersect_src):
@@ -139,6 +171,75 @@ def admin_bound_calculator(key, admin_sf, intersect_src):
     df = pd.DataFrame(list(country_vals.items()), columns=['iso3', 'km2'])
     df['key'] = key
     return df[['key', 'iso3', 'km2']].copy()
+
+# function to compare model agreement on predominent effect at country level
+def warm_vs_luc_plotter(filepath,  # filepath input file
+                        file_year,  # year of input file (string)
+                        admin_sf,  # administrative boundary shapefile
+                        bio_select,  # defined in the analysis script
+                        file_scenario,  # input file SSP-RCP scenario (string)
+                        biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
+                        lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
+
+    # STEP1: load files for LUC, refugia, and baseline refugia
+    ar_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Afforestation_{file_scenario}_{file_year}.tif',
+                                      masked=True)  # mask nan values for calc
+    be_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Bioenergy_{file_scenario}_{file_year}.tif',
+                                      masked=True)  # mask nan values for calc
+
+    bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
+                                  (bio_select['Scenario'] == file_scenario)][file_year])
+
+    refugia = rioxarray.open_rasterio(path_uea / bio_file,
+                                      masked=True)  # mask nan values for calc
+
+    refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
+                                          masked=True)
+
+    # align files
+    be_file = be_file.rio.reproject_match(ar_file)
+    luc_file = ar_file + be_file
+
+    refugia = refugia.rio.reproject_match(luc_file)
+    refugia_ref = refugia_ref.rio.reproject_match(luc_file)
+
+    # calculate warming and land impact on reference refugia
+    luc_in_bio_ref = luc_file * refugia_ref
+    luc_in_bio_ref.rio.to_raster(filepath / 'luc_in_bio_ref.tif')
+
+    ref_bio_warm_loss = refugia_ref - refugia
+    ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss.tif')
+    land_area_calculation(path_uea, 'ref_bio_warm_loss.tif', 'ref_bio_warm_loss_a.tif')
+
+    # calculate warming and luc loss per country
+    warm_loss = rs.open(path_uea / 'ref_bio_warm_loss_a.tif', masked=True)
+    luc_loss = rs.open(filepath / 'luc_in_bio_ref.tif', masked=True)
+    warm_df = admin_bound_calculator('warm_loss', admin_sf, warm_loss)
+    luc_df = admin_bound_calculator('luc_loss', admin_sf, luc_loss)
+
+    loss_df = pd.merge(warm_df, luc_df, on='iso3', how='outer',
+                       suffixes=['_warm', '_luc'])
+
+    # asign values 1 = warm > luc; -1 = warm < luc; 0 = warm == luc
+    loss_df['impact'] = np.where(loss_df['km2_warm'] >
+                                 loss_df['km2_luc'], 1,
+                                 np.where(loss_df['km2_warm'] <
+                                          loss_df['km2_luc'], -1, np.nan))
+    loss_df['model'] = lu_model
+    return loss_df
+
+# sum cells in array that are positive (squeeze removes non-required dims)
+def pos_val_summer(arr, squeeze=True):
+    if squeeze:
+        arr = np.squeeze(arr)
+
+    arr = np.clip(arr, 0, None)  # Set values below zero to 0
+    return np.nansum(arr)  # Sum only non-NaN values
+
+# function to concat multiple dfs across models
+def load_and_concat(suffix, paths):
+    dfs = [pd.read_csv(_path / f'{i}_{suffix}.csv') for i, _path in paths.items()]
+    return pd.concat(dfs, ignore_index=True)
 
 # function to interpolate available land cover years to a certain target year
 def land_cover_interpolator(model,

@@ -95,49 +95,6 @@ for model in models:
 
     start = time()  # runtime monitoring
 
-    def overlay_calculator(input_tif,  # land use model input file (string)
-                           filepath,  # filepath input file
-                           file_year,  # year of input file (string)
-                           file_scenario,  # input file SSP-RCP scenario (string)
-                           mitigation_option,  # 'Afforestation' or 'Bioenergy'
-                           biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
-                           lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
-
-        # STEP1: load files for LUC, refugia, and baseline refugia
-        land_use = rioxarray.open_rasterio(filepath / f'{lu_model}_{input_tif}',
-                                           masked=True)  # mask nan values for calc
-
-        bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
-                                           (bio_select['Scenario'] == file_scenario)][file_year])
-
-        refugia = rioxarray.open_rasterio(path_uea / bio_file,
-                                          masked=True)  # mask nan values for calc
-
-        refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
-                                              masked=True)
-
-        # align files
-        refugia = refugia.rio.reproject_match(land_use)
-        refugia_ref = refugia_ref.rio.reproject_match(land_use)
-
-        # calculate warming and land impact on reference refugia (global)
-        luc_in_bio_ref = land_use * refugia_ref
-        ref_bio_warm_loss = refugia_ref - refugia
-        ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss_temp.tif',
-                                        driver='GTiff')
-
-        # calculate refugia extents
-        ref_bio_warm_loss_a = land_area_calculation(path_uea,
-                                                    'ref_bio_warm_loss_temp.tif')
-        refugia_ref_a = land_area_calculation(path_uea, biodiv_ref_warm_file)
-
-        # calculate aggregated area "losses" and baseline refugia
-        luc_in_bio_ref_agg = pos_val_summer(luc_in_bio_ref, squeeze=True)
-        ref_bio_warm_loss_agg = pos_val_summer(ref_bio_warm_loss_a, squeeze=True)
-        refugia_ref_agg = pos_val_summer(refugia_ref_a, squeeze=True)
-
-        return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg
-
     # use overlay_calculator
     def process_row(row):
         input_tif = row['file_name']
@@ -151,6 +108,7 @@ for model in models:
                 overlay_calculator(input_tif,
                                    path,
                                    file_year,
+                                   bio_select,
                                    file_scenario,
                                    mitigation_option,
                                    'bio1.3_bin.tif',
@@ -259,7 +217,7 @@ plt.subplots_adjust(hspace=0.15, wspace=0.15)
 sns.despine()
 plt.show()
 
-# %% spatially-explicit estimation of warming vs luc in SSP2-26
+# %% country-level agreement of warming vs LUC in SSP2-26 in 2050 and 2100
 sf_path = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/wab')
 admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 
@@ -267,61 +225,8 @@ admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 file_years = ['2050', '2100']
 file_scenario = 'SSP2-26'
 
+# use warm_vs_luc_plotter to determine predominant effect at country level
 for file_year in file_years:
-
-    def warm_vs_luc_plotter(filepath,  # filepath input file
-                            file_year,  # year of input file (string)
-                            file_scenario,  # input file SSP-RCP scenario (string)
-                            biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
-                            lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
-
-        # STEP1: load files for LUC, refugia, and baseline refugia
-        ar_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Afforestation_{file_scenario}_{file_year}.tif',
-                                          masked=True)  # mask nan values for calc
-        be_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Bioenergy_{file_scenario}_{file_year}.tif',
-                                          masked=True)  # mask nan values for calc
-
-        bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
-                                      (bio_select['Scenario'] == file_scenario)][file_year])
-
-        refugia = rioxarray.open_rasterio(path_uea / bio_file,
-                                          masked=True)  # mask nan values for calc
-
-        refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
-                                              masked=True)
-
-        # align files
-        be_file = be_file.rio.reproject_match(ar_file)
-        luc_file = ar_file + be_file
-
-        refugia = refugia.rio.reproject_match(luc_file)
-        refugia_ref = refugia_ref.rio.reproject_match(luc_file)
-
-        # calculate warming and land impact on reference refugia
-        luc_in_bio_ref = luc_file * refugia_ref
-        luc_in_bio_ref.rio.to_raster(filepath / 'luc_in_bio_ref.tif')
-
-        ref_bio_warm_loss = refugia_ref - refugia
-        ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss.tif')
-        land_area_calculation(path_uea, 'ref_bio_warm_loss.tif', 'ref_bio_warm_loss_a.tif')
-
-        # calculate warming and luc loss per country
-        warm_loss = rs.open(path_uea / 'ref_bio_warm_loss_a.tif', masked=True)
-        luc_loss = rs.open(filepath / 'luc_in_bio_ref.tif', masked=True)
-        warm_df = admin_bound_calculator('warm_loss', admin_sf, warm_loss)
-        luc_df = admin_bound_calculator('luc_loss', admin_sf, luc_loss)
-
-        loss_df = pd.merge(warm_df, luc_df, on='iso3', how='outer',
-                           suffixes=['_warm', '_luc'])
-
-        # asign values 1 = warm > luc; -1 = warm < luc; 0 = warm == luc
-        loss_df['impact'] = np.where(loss_df['km2_warm'] >
-                                     loss_df['km2_luc'], 1,
-                                     np.where(loss_df['km2_warm'] <
-                                              loss_df['km2_luc'], -1, np.nan))
-        loss_df['model'] = lu_model
-        return loss_df
-
 
     loss_dfs = []
     for model in models:
@@ -336,6 +241,8 @@ for file_year in file_years:
 
         loss_df = warm_vs_luc_plotter(path,
                                       file_year,
+                                      admin_sf,
+                                      bio_select,
                                       file_scenario,
                                       'bio1.3_bin.tif',  # adjust if required
                                       model)
@@ -390,6 +297,9 @@ for file_year in file_years:
     plt.title(f'{file_scenario} {file_year} \n{recovery}', fontsize=13, x=0.05,
               y=0.27, ha='left')
     plt.show()
+
+# %% bivariate maps of warming vs LUC at country level per model (SSP2-26 2100)
+
 
 # %% comparison of refugia impact at 1.5C before and after overshoot
 os_df = ar6_data.copy()
@@ -512,4 +422,4 @@ refug1p5 = land_area_calculation(path_uea, 'bio1.5_bin.tif')
 lost_ref = pos_val_summer(lost_ref, squeeze=True)
 refug1p5 = pos_val_summer(refug1p5, squeeze=True)
 lost_share = (lost_ref / refug1p5) * 100
-print(lost_share)
+print('Share of 1.5°C-refugia lost at 1.6 °C peak (%):', lost_share)
