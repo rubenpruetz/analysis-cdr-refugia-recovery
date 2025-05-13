@@ -61,10 +61,10 @@ temperature_decline = 'allowed'  # options: 'allowed' or 'not_allowed'
 
 if temperature_decline == 'allowed':
     warm_file = ar6_data.copy()
-    recovery = '(Full recovery)'
+    recovery = 'Full recovery'
 elif temperature_decline == 'not_allowed':
     warm_file = ar6_data_stab.copy()
-    recovery = '(No recovery)'
+    recovery = 'No recovery'
 
 bio_select = warm_file.set_index(['Model', 'Scenario'])
 bio_select = 'bio' + \
@@ -223,11 +223,12 @@ sf_path = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/w
 admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 
 # adjust if necessary
-file_years = ['2050', '2100']
+thresholds = [5, 10]
 file_scenario = 'SSP2-26'
+file_year = '2100'
 
 # use warm_vs_luc_plotter to determine predominant effect at country level
-for file_year in file_years:
+for thres in thresholds:
 
     loss_dfs = []
     for model in models:
@@ -251,22 +252,33 @@ for file_year in file_years:
 
     loss_dfs = pd.concat(loss_dfs, ignore_index=True)
 
+    # exclude countries for which both losses are below 1% of national refugia
+    land_area_calculation(path_uea, 'bio1.3_bin.tif', 'bio1.3_bin_a.tif')
+    refug_ref = rs.open(path_uea / 'bio1.3_bin_a.tif', masked=True)
+    is03_refug_ref = admin_bound_calculator('iso3_refug_ref', admin_sf, refug_ref)
+    is03_refug_ref = is03_refug_ref.rename(columns={'km2': 'km2_ref'})
+    loss_dfs = pd.merge(loss_dfs, is03_refug_ref, on='iso3')
+    loss_dfs['warm_loss_perc'] = (loss_dfs['km2_warm'] / loss_dfs['km2_ref']) * 100
+    loss_dfs['luc_loss_perc'] = (loss_dfs['km2_luc'] / loss_dfs['km2_ref']) * 100
+    mask = (loss_dfs['warm_loss_perc'] < thres) & (loss_dfs['luc_loss_perc'] < thres)
+    loss_mask = loss_dfs.copy()
+    loss_mask.loc[mask, ['impact', 'warm_loss_perc', 'luc_loss_perc']] = np.nan
+
     # determine model agreement on predominant effect across countries
-    pos_count = loss_dfs[loss_dfs['impact'] == 1].groupby('iso3').size()
-    pos_count = pos_count.reindex(loss_dfs['iso3'].unique()).fillna(0).astype(int)
+    pos_count = loss_mask[loss_mask['impact'] == 1].groupby('iso3').size()
+    pos_count = pos_count.reindex(loss_mask['iso3'].unique()).fillna(0).astype(int)
     pos_count = pos_count.apply(lambda x: 'Warm' if x >= 3 else 'NS')
     pos_df = pos_count.reset_index(name='impact')
 
-    neg_count = loss_dfs[loss_dfs['impact'] == -1].groupby('iso3').size()
-    neg_count = neg_count.reindex(loss_dfs['iso3'].unique()).fillna(0).astype(int)
+    neg_count = loss_mask[loss_mask['impact'] == -1].groupby('iso3').size()
+    neg_count = neg_count.reindex(loss_mask['iso3'].unique()).fillna(0).astype(int)
     neg_count = neg_count.apply(lambda x: 'Luc' if x >= 3 else 'NS')
     neg_df = neg_count.reset_index(name='impact')
 
-    loss_df = pd.concat([pos_df, neg_df]).drop_duplicates()
-    duplicates = loss_df[loss_df.duplicated(subset='iso3', keep=False)]
-    loss_df = loss_df[~((loss_df['impact'] == 'NS') &
-                        (loss_df['iso3'].isin(duplicates['iso3'])))]
-
+    loss_mask = pd.concat([pos_df, neg_df]).drop_duplicates()
+    duplicates = loss_mask[loss_mask.duplicated(subset='iso3', keep=False)]
+    loss_mask = loss_mask[~((loss_mask['impact'] == 'NS') &
+                        (loss_mask['iso3'].isin(duplicates['iso3'])))]
 
     # plot predominance of warming vs luc impact per country
     cmap = {'Warm': 'crimson', 'Luc': 'mediumblue', 'NS': 'gainsboro'}
@@ -277,8 +289,8 @@ for file_year in file_years:
     # plot each country with data
     for record in shape_records:
         country_iso = record.attributes['iso3']
-        if country_iso in loss_df['iso3'].values:
-            value = loss_df[loss_df['iso3'] == country_iso]['impact'].values[0]
+        if country_iso in loss_mask['iso3'].values:
+            value = loss_mask[loss_mask['iso3'] == country_iso]['impact'].values[0]
             color = cmap[str(value)]
             geom = record.geometry
             ax.add_geometries([geom], ccrs.PlateCarree(), facecolor=color,
@@ -295,18 +307,11 @@ for file_year in file_years:
               loc='lower left', fontsize=12, columnspacing=0.8, handletextpad=0.5,
               frameon=False)
 
-    plt.title(f'Agreement {file_scenario} {file_year} \n{recovery}', fontsize=12, 
+    plt.title(f'Model agreement {file_scenario} {file_year} \n({recovery} & min. loss of {thres}%)', fontsize=12,
               x=0.375, y=0.125, ha='left')
     plt.show()
 
 # %% bivariate maps of warming vs LUC at country level per model (SSP2-26 2100)
-land_area_calculation(path_uea, 'bio1.3_bin.tif', 'bio1.3_bin_a.tif')
-refug_ref = rs.open(path_uea / 'bio1.3_bin_a.tif', masked=True)
-is03_refug_ref = admin_bound_calculator('iso3_refug_ref', admin_sf, refug_ref)
-is03_refug_ref = is03_refug_ref.rename(columns={'km2': 'km2_ref'})
-loss_dfs = pd.merge(loss_dfs, is03_refug_ref, on='iso3')
-loss_dfs['warm_loss_perc'] = (loss_dfs['km2_warm'] / loss_dfs['km2_ref']) * 100
-loss_dfs['luc_loss_perc'] = (loss_dfs['km2_luc'] / loss_dfs['km2_ref']) * 100
 loss_dfs = loss_dfs[['model', 'iso3', 'warm_loss_perc', 'luc_loss_perc']].copy()
 
 for model in models:
