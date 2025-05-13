@@ -263,63 +263,109 @@ plt.show()
 sf_path = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/wab')
 admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 
-def warm_vs_luc_plotter(filepath,  # filepath input file
-                        file_year,  # year of input file (string)
-                        file_scenario,  # input file SSP-RCP scenario (string)
-                        biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
-                        lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
+# adjust if necessary
+file_years = ['2050', '2100']
+file_scenario = 'SSP2-26'
 
-    # STEP1: load files for LUC, refugia, and baseline refugia
-    ar_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Afforestation_{file_scenario}_{file_year}.tif',
-                                      masked=True)  # mask nan values for calc
-    be_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Bioenergy_{file_scenario}_{file_year}.tif',
-                                      masked=True)  # mask nan values for calc
+for file_year in file_years:
 
-    bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
-                                  (bio_select['Scenario'] == file_scenario)][file_year])
-
-    refugia = rioxarray.open_rasterio(path_uea / bio_file,
-                                      masked=True)  # mask nan values for calc
-
-    refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
-                                          masked=True)
-
-    # align files
-    be_file = be_file.rio.reproject_match(ar_file)
-    luc_file = ar_file + be_file
-
-    refugia = refugia.rio.reproject_match(luc_file)
-    refugia_ref = refugia_ref.rio.reproject_match(luc_file)
-
-    # calculate warming and land impact on reference refugia
-    luc_in_bio_ref = luc_file * refugia_ref
-    luc_in_bio_ref.rio.to_raster(filepath / 'luc_in_bio_ref.tif')
-
-    ref_bio_warm_loss = refugia_ref - refugia
-    ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss.tif')
-    land_area_calculation(path_uea, 'ref_bio_warm_loss.tif', 'ref_bio_warm_loss_a.tif')
-
-    # calculate warming and luc loss per country
-    warm_loss = rs.open(path_uea / 'ref_bio_warm_loss_a.tif', masked=True)
-    luc_loss = rs.open(filepath / 'luc_in_bio_ref.tif', masked=True)
-    warm_df = admin_bound_calculator('warm_loss', admin_sf, warm_loss)
-    luc_df = admin_bound_calculator('luc_loss', admin_sf, luc_loss)
-
-    loss_df = pd.merge(warm_df, luc_df, on='iso3', how='outer',
-                       suffixes=['_warm', '_luc'])
-
-    # asign values 1 = warm > luc; 2 = warm < luc; 3 = warm == luc
-    loss_df['impact'] = np.where(loss_df['km2_warm'] >
-                                 loss_df['km2_luc'], 1,
-                                 np.where(loss_df['km2_warm'] <
-                                          loss_df['km2_luc'], 2, 3))
-
+    def warm_vs_luc_plotter(filepath,  # filepath input file
+                            file_year,  # year of input file (string)
+                            file_scenario,  # input file SSP-RCP scenario (string)
+                            biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
+                            lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
+    
+        # STEP1: load files for LUC, refugia, and baseline refugia
+        ar_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Afforestation_{file_scenario}_{file_year}.tif',
+                                          masked=True)  # mask nan values for calc
+        be_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Bioenergy_{file_scenario}_{file_year}.tif',
+                                          masked=True)  # mask nan values for calc
+    
+        bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
+                                      (bio_select['Scenario'] == file_scenario)][file_year])
+    
+        refugia = rioxarray.open_rasterio(path_uea / bio_file,
+                                          masked=True)  # mask nan values for calc
+    
+        refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
+                                              masked=True)
+    
+        # align files
+        be_file = be_file.rio.reproject_match(ar_file)
+        luc_file = ar_file + be_file
+    
+        refugia = refugia.rio.reproject_match(luc_file)
+        refugia_ref = refugia_ref.rio.reproject_match(luc_file)
+    
+        # calculate warming and land impact on reference refugia
+        luc_in_bio_ref = luc_file * refugia_ref
+        luc_in_bio_ref.rio.to_raster(filepath / 'luc_in_bio_ref.tif')
+    
+        ref_bio_warm_loss = refugia_ref - refugia
+        ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss.tif')
+        land_area_calculation(path_uea, 'ref_bio_warm_loss.tif', 'ref_bio_warm_loss_a.tif')
+    
+        # calculate warming and luc loss per country
+        warm_loss = rs.open(path_uea / 'ref_bio_warm_loss_a.tif', masked=True)
+        luc_loss = rs.open(filepath / 'luc_in_bio_ref.tif', masked=True)
+        warm_df = admin_bound_calculator('warm_loss', admin_sf, warm_loss)
+        luc_df = admin_bound_calculator('luc_loss', admin_sf, luc_loss)
+    
+        loss_df = pd.merge(warm_df, luc_df, on='iso3', how='outer',
+                           suffixes=['_warm', '_luc'])
+    
+        # asign values 1 = warm > luc; -1 = warm < luc; 0 = warm == luc
+        loss_df['impact'] = np.where(loss_df['km2_warm'] >
+                                     loss_df['km2_luc'], 1,
+                                     np.where(loss_df['km2_warm'] <
+                                              loss_df['km2_luc'], -1, np.nan))
+        loss_df['model'] = lu_model
+        return loss_df
+    
+    
+    loss_dfs = []
+    for model in models:
+        if model == 'GLOBIOM':
+            path = path_globiom
+        elif model == 'AIM':
+            path = path_aim
+        elif model == 'IMAGE':
+            path = path_image
+        elif model == 'GCAM':
+            path = path_gcam
+    
+        loss_df = warm_vs_luc_plotter(path,
+                                      file_year,
+                                      file_scenario,
+                                      'bio1.3_bin.tif',  # adjust if required
+                                      model)
+        loss_dfs.append(loss_df)
+    
+    loss_dfs = pd.concat(loss_dfs, ignore_index=True)
+    
+    # determine model agreement on predominant effect across countries
+    pos_count = loss_dfs[loss_dfs['impact'] == 1].groupby('iso3').size()
+    pos_count = pos_count.reindex(loss_dfs['iso3'].unique()).fillna(0).astype(int)
+    pos_count = pos_count.apply(lambda x: 'Warm' if x >= 3 else 'NS')
+    pos_df = pos_count.reset_index(name='impact')
+    
+    neg_count = loss_dfs[loss_dfs['impact'] == -1].groupby('iso3').size()
+    neg_count = neg_count.reindex(loss_dfs['iso3'].unique()).fillna(0).astype(int)
+    neg_count = neg_count.apply(lambda x: 'Luc' if x >= 3 else 'NS')
+    neg_df = neg_count.reset_index(name='impact')
+    
+    loss_df = pd.concat([pos_df, neg_df]).drop_duplicates()
+    duplicates = loss_df[loss_df.duplicated(subset='iso3', keep=False)]
+    loss_df = loss_df[~((loss_df['impact'] == 'NS') &
+                        (loss_df['iso3'].isin(duplicates['iso3'])))]
+    
+    
     # plot predominance of warming vs luc impact per country
-    cmap = {'1': 'crimson', '2': 'mediumblue', '3': 'grey'}
+    cmap = {'Warm': 'crimson', 'Luc': 'mediumblue', 'NS': 'gainsboro'}
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), subplot_kw={'projection': ccrs.Robinson()})
-
+    
     shape_records = list(Reader(sf_path / 'world-administrative-boundaries.shp').records())
-
+    
     # plot each country with data
     for record in shape_records:
         country_iso = record.attributes['iso3']
@@ -329,37 +375,21 @@ def warm_vs_luc_plotter(filepath,  # filepath input file
             geom = record.geometry
             ax.add_geometries([geom], ccrs.PlateCarree(), facecolor=color,
                               edgecolor='black', linewidth=0.2)
-
+    
     ax.coastlines(linewidth=0.2)
-
+    
     legend_patches = [
         mpatches.Patch(color='crimson', label='More warming-related loss'),
         mpatches.Patch(color='mediumblue', label='More LUC-related loss'),
-        mpatches.Patch(color='grey', label='No or even loss')]
-
-    ax.legend(bbox_to_anchor=(0.077, -0.12), handles=legend_patches, ncols=4,
-              loc='lower left', fontsize=11, columnspacing=0.8, handletextpad=0.5,
+        mpatches.Patch(color='gainsboro', label='No agreement')]
+    
+    ax.legend(bbox_to_anchor=(0.01, -0.12), handles=legend_patches, ncols=4,
+              loc='lower left', fontsize=13, columnspacing=0.8, handletextpad=0.5,
               frameon=True)
-
-    plt.title(f'{lu_model} {file_scenario} {file_year} \n{recovery}',
-              fontsize=11, x=0.05, y=0.27, ha='left')
+    
+    plt.title(f'{file_scenario} {file_year} \n{recovery}', fontsize=13, x=0.05,
+              y=0.27, ha='left')
     plt.show()
-
-for model in models:
-    if model == 'GLOBIOM':
-        path = path_globiom
-    elif model == 'AIM':
-        path = path_aim
-    elif model == 'IMAGE':
-        path = path_image
-    elif model == 'GCAM':
-        path = path_gcam
-
-    warm_vs_luc_plotter(path,
-                        '2100',  # adust if required
-                        'SSP2-26',  # adust if required
-                        'bio1.3_bin.tif',  # adust if required
-                        model)
 
 # %% comparison of refugia impact at 1.5C before and after overshoot
 os_df = ar6_data.copy()
@@ -433,35 +463,35 @@ for scenario in os_scenarios:
 
     os_diff = rs.open(path / os_file)
     refug = rs.open(path_uea / 'bio1.5_bin.tif')
-    
+
     data_os_diff = os_diff.read(1)
     data_refug = refug.read(1)
-    
+
     data_os_diff[data_os_diff == 0] = np.nan  # ignore zero values
-    
+
     # get the metadata
     transform = os_diff.transform
     extent_os = [transform[2], transform[2] + transform[0] * os_diff.width,
                  transform[5] + transform[4] * os_diff.height, transform[5]]
-    
+
     transform = refug.transform
     extent_refug = [transform[2], transform[2] + transform[0] * refug.width,
                     transform[5] + transform[4] * refug.height, transform[5]]
-    
+
     bounds_os = [-40, -20, -1, 1, 20, 40]
     norm_os = mpl.colors.BoundaryNorm(bounds_os, mpl.cm.PuOr.N, extend='both')
-    
+
     fig = plt.figure(figsize=(10, 6.1))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.LambertAzimuthalEqualArea())  # choose projection | LambertAzimuthalEqualArea())
-    
+
     img_re = ax.imshow(data_refug, extent=extent_refug, transform=ccrs.PlateCarree(),
                        origin='upper', cmap='Greys', alpha=0.1)
-    
+
     img_os = ax.imshow(data_os_diff, extent=extent_os, transform=ccrs.PlateCarree(),
                        origin='upper', cmap='PuOr', norm=norm_os, alpha=1)
-    
+
     ax.coastlines(linewidth=0.2)
-    
+
     cbar_os = plt.colorbar(img_os, ax=ax, orientation='horizontal', aspect=13, pad=0.16)
     cbar_os.ax.set_position([0.41, -0.165, 0.2, 0.501])
     cbar_os.ax.tick_params(labelsize=7)
@@ -469,7 +499,7 @@ for scenario in os_scenarios:
                       labelpad=1, fontsize=8)
     plt.title(f'{scenario}', fontsize=8, ha='center')
     plt.show()
-    
+
 # calculate share of 1.5 °C climate refugia that would be lost at 1.6 °C
 refugia1p5 = rioxarray.open_rasterio(path_uea / 'bio1.5_bin.tif', masked=True)
 refugia1p6 = rioxarray.open_rasterio(path_uea / 'bio1.6_bin.tif', masked=True)
