@@ -157,23 +157,23 @@ for model in models:
     area_df['Model'] = model
 
     # save for later use
-    area_df.to_csv(path / f'{model}_area_df_clim_zone_temp_decline_{temperature_decline}.csv', index=False)
+    area_df.to_csv(path / f'{model}_area_df_temp_decline_{temperature_decline}.csv', index=False)
 
     end = time()
     print(f'Runtime {(end - start) /60} min')
 
 # %% plot warming versus land use change impact on refugia
 paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom, 'IMAGE': path_image}
-decline_df = load_and_concat('area_df_clim_zone_temp_decline_allowed', paths)
+decline_df = load_and_concat('area_df_temp_decline_allowed', paths)
 decline_df['Decline'] = 'True'
-nodecline_df = load_and_concat('area_df_clim_zone_temp_decline_not_allowed', paths)
+nodecline_df = load_and_concat('area_df_temp_decline_not_allowed', paths)
 nodecline_df['Decline'] = 'False'
-area_df = pd.concat([decline_df, nodecline_df])
+output_1 = pd.concat([decline_df, nodecline_df])
 
 rcps = ['19', '26', '34', '45']  # specify RCPs that shall be plotted
-area_df['RCP'] = area_df['RCP'].astype(str)
-area_df = area_df.loc[area_df['RCP'].isin(rcps)]
-area_df = area_df.loc[area_df['SSP'].isin(['SSP2'])]
+output_1['RCP'] = output_1['RCP'].astype(str)
+output_1 = output_1.loc[output_1['RCP'].isin(rcps)]
+output_1 = output_1.loc[output_1['SSP'].isin(['SSP2'])]
 decline_conditions = ['False', 'True']
 decline_labels = ['No recovery', 'Full recovery']
 
@@ -185,7 +185,7 @@ fig, axes = plt.subplots(2, 4, figsize=(11, 6), sharex=True, sharey=True)
 for i, decline in enumerate(decline_conditions):
     for j, model in enumerate(models):
 
-        data = area_df.query(f'Model == "{model}" & Decline == "{decline}"')
+        data = output_1.query(f'Model == "{model}" & Decline == "{decline}"')
 
         sns.lineplot(data=data, x='land_loss_perc', y='warm_loss_perc', hue='RCP', sort=False,
                      palette=rcp_palette, legend=False, ax=axes[i, j])
@@ -303,19 +303,19 @@ for thres in thresholds:
         mpatches.Patch(color='mediumblue', label='More LUC loss'),
         mpatches.Patch(color='gainsboro', label='No agreement')]
 
-    ax.legend(bbox_to_anchor=(0.01, 0.32), handles=legend_patches, ncols=1,
-              loc='lower left', fontsize=13, handletextpad=0.3,
+    ax.legend(bbox_to_anchor=(0.0, 0.3), handles=legend_patches, ncols=1,
+              loc='lower left', fontsize=15, handlelength=0.65, handletextpad=0.3,
               frameon=False)
 
-    plt.title(f'Model agreement {file_scenario} {file_year} \n({recovery} & min. loss of {thres}%)', fontsize=13,
-              x=0.375, y=0.125, ha='left')
+    plt.title(f'Model agreement {file_scenario} {file_year} \n({recovery} & min. loss of {thres}%)',
+              fontsize=15, x=0.375, y=0.125, ha='left')
     plt.show()
 
 # %% bivariate maps of warming vs LUC at country level per model (SSP2-26 2100)
-loss_dfs = loss_dfs[['model', 'iso3', 'warm_loss_perc', 'luc_loss_perc']].copy()
+output_2 = loss_dfs[['model', 'iso3', 'warm_loss_perc', 'luc_loss_perc']].copy()
 
 for model in models:
-    bivar_map = loss_dfs.query('model == @model').reset_index()
+    bivar_map = output_2.query('model == @model').reset_index()
     bivar_map = bivar_map.dropna(subset=['warm_loss_perc', 'luc_loss_perc']).copy()
 
     def classify(series, bins=[0, 25, 50, 100]):
@@ -355,7 +355,7 @@ for model in models:
                           facecolor=facecolor, edgecolor='black', linewidth=0.2)
 
     # plot legend
-    legend_ax = fig.add_axes([0.108, 0.375, 0.155, 0.155])
+    legend_ax = fig.add_axes([0.109, 0.375, 0.155, 0.155])
     for row in range(3):
         for col in range(3):
             color = color_matrix[2 - row][col]
@@ -363,23 +363,23 @@ for model in models:
 
     legend_ax.set_yticks([0.5, 1.5, 2.5])
     legend_ax.set_xticklabels(['', '', ''])
-    legend_ax.set_yticklabels(['0-25', '25-50', '50-100'], fontsize=13)
-    legend_ax.set_xlabel('LUC loss (%)', fontsize=13, labelpad=0.2)
-    label = legend_ax.set_ylabel('Warm. loss (%)', fontsize=13, labelpad=0.2)
-    label.set_bbox(dict(facecolor='white', edgecolor='none', pad=1))
+    legend_ax.set_yticklabels(['0-25', '25-50', '50-100'], fontsize=15)
+    legend_ax.set_xlabel('LUC loss (%)', fontsize=15, labelpad=1)
+    label = legend_ax.set_ylabel('Warm. loss (%)', fontsize=15, labelpad=1)
+    label.set_bbox(dict(facecolor='white', edgecolor='none', pad=2.8))
     legend_ax.tick_params(axis='both', which='both', length=0)
     legend_ax.set_xlim(0, 3)
     legend_ax.set_ylim(0, 3)
     legend_ax.set_aspect('equal')
-    
+
     legend_ax.annotate('', xy=(3.5, 0), xytext=(0, 0),
-                       arrowprops=dict(arrowstyle='-|>', linewidth=0.8, 
+                       arrowprops=dict(arrowstyle='-|>', linewidth=0.8,
                                        fc='black'), annotation_clip=False)
     legend_ax.annotate('', xy=(0, 3.5), xytext=(0, 0),
-                       arrowprops=dict(arrowstyle='-|>', linewidth=0.8, 
+                       arrowprops=dict(arrowstyle='-|>', linewidth=0.8,
                                        fc='black'), annotation_clip=False)
-    
-    fig.text(0.313, 0.27, f'{model} SSP2-26 2100\n({recovery})', fontsize=13)
+
+    fig.text(0.313, 0.27, f'{model} SSP2-26 2100\n({recovery})', fontsize=15)
     plt.show()
 
 # %% comparison of refugia impact at 1.5C before and after overshoot
@@ -418,7 +418,7 @@ plt.xticks([2020, 2035, 2069, 2098])
 plt.yticks([1.3, 1.4, 1.5, 1.6])
 sns.despine()
 plt.xlabel('')
-plt.ylabel('Rounded median global warming [°C]\n(MAGICCv7.5.3)')
+plt.ylabel('Rounded median global warming\n[°C] (MAGICCv7.5.3)')
 plt.legend(bbox_to_anchor=(0, 1.15), loc='upper left',
            columnspacing=1, handletextpad=0.4, ncols=2)
 plt.show()
@@ -504,3 +504,9 @@ lost_ref = pos_val_summer(lost_ref, squeeze=True)
 refug1p5 = pos_val_summer(refug1p5, squeeze=True)
 lost_share = (lost_ref / refug1p5) * 100
 print('Share of 1.5°C-refugia lost at 1.6 °C peak (%):', lost_share)
+
+# %% export data
+with pd.ExcelWriter(path_project / 'output_data.xlsx',
+                    engine='openpyxl') as writer:
+    output_1.to_excel(writer, sheet_name='Data_figure_1', index=False)
+    output_1.to_excel(writer, sheet_name='Data_figure_2', index=False)
