@@ -156,7 +156,7 @@ for model in models:
                                                                 area_df['luc_in_refug'])
 
     area_df['warm_loss_perc'] = area_df['refug_ref_warm_loss'] / area_df['refug_ref'] * 100
-    area_df['land_loss_perc'] = area_df['luc_in_refug_ref'] / area_df['refug_ref'] * 100
+    area_df['luc_loss_perc'] = area_df['luc_in_refug_ref'] / area_df['refug_ref'] * 100
     area_df['total_loss'] = area_df['refug_ref_warm_loss'] + area_df['luc_in_refug']
     area_df['total_loss_perc'] = area_df['total_loss'] / area_df['refug_ref'] * 100
 
@@ -200,9 +200,9 @@ for i, decline in enumerate(decline_conditions):
 
         data = plot_df.query(f'Model == "{model}" & Decline == "{decline}"')
 
-        sns.lineplot(data=data, x='land_loss_perc', y='warm_loss_perc', hue='RCP', sort=False,
+        sns.lineplot(data=data, x='luc_loss_perc', y='warm_loss_perc', hue='RCP', sort=False,
                      palette=rcp_palette, legend=False, ax=axes[i, j])
-        sns.scatterplot(data=data, x='land_loss_perc', y='warm_loss_perc', hue='RCP',
+        sns.scatterplot(data=data, x='luc_loss_perc', y='warm_loss_perc', hue='RCP',
                         palette=rcp_palette, style='Year', s=100, alpha=0.7,
                         legend=(i == 0 and j == 0), ax=axes[i, j])
 
@@ -225,7 +225,7 @@ plt.yticks([0, 14, 28, 42, 56, 70])
 
 for ax_row in axes:
     for ax in ax_row:
-        ax.tick_params(axis='both', labelsize=12) 
+        ax.tick_params(axis='both', labelsize=12)
 
 fig.supxlabel("Today's refugia 'lost' to afforestation & bioenergy plantations\n(combined effect assuming all negative) [%]",
               x=0.51, y=-0.025, fontsize=14)
@@ -241,9 +241,9 @@ plot_norecover = plot_df2.query('Decline == "False"').reset_index()
 plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
 plt.figure(figsize=(1.5, 5.2))
-sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', 
+sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc',
              hue='RCP', palette=rcp_palette,linestyle='-')
-sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP', 
+sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP',
              palette=rcp_palette,linestyle='--', legend=False)
 sns.despine()
 
@@ -253,7 +253,7 @@ plt.xticks([2030, 2065, 2100])
 plt.xlabel('')
 plt.ylabel("Today's refugia lost to global warming and LUC\n(combined effect assuming all negative) [%]")
 plt.legend(bbox_to_anchor=(1.19, 1.125), loc='upper right', ncols=4,
-           columnspacing=0.8, handletextpad=0.3, handlelength=1, fontsize=9.2)
+           columnspacing=0.8, handletextpad=0.3, handlelength=1, fontsize=9.5)
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
 
@@ -545,7 +545,22 @@ lost_share = (lost_ref / refug1p5) * 100
 print('Share of 1.5°C-refugia lost at 1.6 °C peak (%):', lost_share)
 
 # %% export data
+output_1 = output_1[['Model', 'scenario', 'Year', 'Decline', 'refug_ref_warm_loss',
+                     'luc_in_refug_ref', 'total_loss', 'warm_loss_perc',
+                     'luc_loss_perc', 'total_loss_perc']].copy()
+output_1.rename(columns={'Model': 'model', 'Year': 'year', 'Decline': 'recovery',
+                         'refug_ref_warm_loss': 'refug_ref_warming_loss_km2',
+                         'luc_in_refug_ref': 'luc_in_refug_ref_km2',
+                         'total_loss': 'total_loss_km2',
+                         'warm_loss_perc': 'warming_loss_percent',
+                         'luc_loss_perc': 'luc_loss_percent',
+                         'total_loss_perc': 'total_loss_percent'}, inplace=True)
+
+output_2.dropna(inplace=True)
+output_2.rename(columns={'warm_loss_perc': 'warming_loss_percent', 
+                         'luc_loss_perc': 'luc_loss_percent'}, inplace=True)
+
 with pd.ExcelWriter(path_project / 'output_data.xlsx',
                     engine='openpyxl') as writer:
     output_1.to_excel(writer, sheet_name='Data_figure_1', index=False)
-    output_1.to_excel(writer, sheet_name='Data_figure_2', index=False)
+    output_2.to_excel(writer, sheet_name='Data_figure_2', index=False)
