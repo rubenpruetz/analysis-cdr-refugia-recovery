@@ -133,8 +133,11 @@ def overlay_calculator(input_tif,  # land use model input file (string)
     # calculate warming and land impact on reference refugia (global)
     luc_in_bio_ref = land_use * refugia_ref
     ref_bio_warm_loss = refugia_ref - refugia
+    luc_in_bio = land_use * refugia
+
     ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss_temp.tif',
                                     driver='GTiff')
+    refugia.rio.to_raster(path_uea / 'bio_temp.tif', driver='GTiff')
 
     # calculate refugia extents
     ref_bio_warm_loss_a = land_area_calculation(path_uea,
@@ -146,7 +149,10 @@ def overlay_calculator(input_tif,  # land use model input file (string)
     ref_bio_warm_loss_agg = pos_val_summer(ref_bio_warm_loss_a, squeeze=True)
     refugia_ref_agg = pos_val_summer(refugia_ref_a, squeeze=True)
 
-    return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg
+    luc_in_bio_agg = pos_val_summer(luc_in_bio, squeeze=True)
+
+    return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
+        luc_in_bio_agg
 
 # function to overlay raster and admin boundary shapefile
 def admin_bound_calculator(key, admin_sf, intersect_src):

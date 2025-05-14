@@ -78,7 +78,7 @@ bio_select.replace({'Model': {'AIM/CGE 2.0': 'AIM',
                               'IMAGE 3.0.1': 'IMAGE'}}, inplace=True)
 
 # specify years for the analysis
-years = ['2030', '2050', '2080', '2100']
+years = ['2030', '2040', '2050', '2060', '2070', '2080', '2090', '2100']
 lookup_sub_yrs = lookup_mi_luc_df.copy()
 lookup_sub_yrs = lookup_sub_yrs.loc[lookup_sub_yrs['year'].isin(years)]
 
@@ -106,7 +106,7 @@ for model in models:
 
         try:
             # run overlay_calculator for all scenarios to retrieve areas as outputs
-            luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg = \
+            luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, luc_in_bio_agg = \
                 overlay_calculator(input_tif,
                                    path,
                                    file_year,
@@ -123,7 +123,8 @@ for model in models:
                 'year': file_year,
                 'refug_ref': refugia_ref_agg,
                 'luc_in_refug_ref': luc_in_bio_ref_agg,
-                'refug_ref_warm_loss': ref_bio_warm_loss_agg}
+                'refug_ref_warm_loss': ref_bio_warm_loss_agg,
+                'luc_in_refug': luc_in_bio_agg}
 
             return result_dict
 
@@ -135,7 +136,8 @@ for model in models:
                 'year': file_year,
                 'refug_ref': float('nan'),
                 'luc_in_refug_ref': float('nan'),
-                'refug_ref_warm_loss': float('nan')}
+                'refug_ref_warm_loss': float('nan'),
+                'luc_in_refug': float('nan')}
 
     area_df = pd.DataFrame.from_records(lookup_sub_yrs.apply(process_row,
                                                              axis=1).values)
@@ -145,11 +147,18 @@ for model in models:
     area_df = area_df.groupby(['scenario',
                                'year',
                                'refug_ref',
-                               'refug_ref_warm_loss'])[['luc_in_refug_ref']].sum()
+                               'refug_ref_warm_loss'])[['luc_in_refug_ref', 'luc_in_refug']].sum()
     area_df.reset_index(inplace=True)
+
+    # set LUC in refugia to LUC in today's refugia where warming goes below 1.3 °C
+    area_df['luc_in_refug'] = area_df['luc_in_refug_ref'].where(area_df['luc_in_refug'] >
+                                                                area_df['luc_in_refug_ref'],
+                                                                area_df['luc_in_refug'])
 
     area_df['warm_loss_perc'] = area_df['refug_ref_warm_loss'] / area_df['refug_ref'] * 100
     area_df['land_loss_perc'] = area_df['luc_in_refug_ref'] / area_df['refug_ref'] * 100
+    area_df['total_loss'] = area_df['refug_ref_warm_loss'] + area_df['luc_in_refug']
+    area_df['total_loss_perc'] = area_df['total_loss'] / area_df['refug_ref'] * 100
 
     area_df['SSP'] = area_df['scenario'].str.split('-').str[0]
     area_df['RCP'] = area_df['scenario'].str.split('-').str[1]
@@ -163,17 +172,21 @@ for model in models:
     print(f'Runtime {(end - start) /60} min')
 
 # %% plot warming versus land use change impact on refugia
+# note: previous code needs to run first in BOTH modes: 'allowed' & 'not_allowed'
 paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom, 'IMAGE': path_image}
 decline_df = load_and_concat('area_df_temp_decline_allowed', paths)
 decline_df['Decline'] = 'True'
 nodecline_df = load_and_concat('area_df_temp_decline_not_allowed', paths)
 nodecline_df['Decline'] = 'False'
 output_1 = pd.concat([decline_df, nodecline_df])
+plot_df = output_1.copy()
 
 rcps = ['19', '26', '34', '45']  # specify RCPs that shall be plotted
-output_1['RCP'] = output_1['RCP'].astype(str)
-output_1 = output_1.loc[output_1['RCP'].isin(rcps)]
-output_1 = output_1.loc[output_1['SSP'].isin(['SSP2'])]
+years = [2030, 2050, 2080, 2100]  # specify years that shall be plotted
+plot_df['RCP'] = plot_df['RCP'].astype(str)
+plot_df = plot_df.loc[plot_df['RCP'].isin(rcps)]
+plot_df = plot_df.loc[plot_df['Year'].isin(years)]
+plot_df = plot_df.loc[plot_df['SSP'].isin(['SSP2'])]
 decline_conditions = ['False', 'True']
 decline_labels = ['No recovery', 'Full recovery']
 
@@ -185,7 +198,7 @@ fig, axes = plt.subplots(2, 4, figsize=(11, 6), sharex=True, sharey=True)
 for i, decline in enumerate(decline_conditions):
     for j, model in enumerate(models):
 
-        data = output_1.query(f'Model == "{model}" & Decline == "{decline}"')
+        data = plot_df.query(f'Model == "{model}" & Decline == "{decline}"')
 
         sns.lineplot(data=data, x='land_loss_perc', y='warm_loss_perc', hue='RCP', sort=False,
                      palette=rcp_palette, legend=False, ax=axes[i, j])
@@ -216,6 +229,28 @@ fig.supylabel("Today's refugia lost to global warming [%]", x=0.054)
 
 plt.subplots_adjust(hspace=0.15, wspace=0.15)
 sns.despine()
+plt.show()
+
+#%% plot combined refugia loss from global warming and mitigation
+plot_df2 = output_1.loc[output_1['RCP'].isin(rcps)]
+plot_norecover = plot_df2.query('Decline == "False"').reset_index()
+plot_recover = plot_df2.query('Decline == "True"').reset_index()
+
+plt.figure(figsize=(2, 5))
+sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', 
+             hue='RCP', palette=rcp_palette,linestyle='-')
+sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP', 
+             palette=rcp_palette,linestyle='--', legend=False)
+sns.despine()
+
+plt.xlim(2030, 2100)
+plt.ylim(0, 70)
+plt.xticks([2030, 2065, 2100])
+plt.xlabel('')
+plt.ylabel("Today's refugia lost to global warming and LUC\n(combined effect assuming all negative) [%]")
+plt.legend(bbox_to_anchor=(-0.4, 1.12), loc='upper left', ncols=4,
+           columnspacing=0.8, handletextpad=0.1)
+plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
 
 # %% country-level agreement of warming vs LUC in SSP2-26 in 2050 and 2100
