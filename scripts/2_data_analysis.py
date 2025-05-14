@@ -193,7 +193,7 @@ decline_labels = ['No recovery', 'Full recovery']
 rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320',
                '45': '#e71d24', '60': '#951b1d', 'Baseline': 'dimgrey'}
 
-fig, axes = plt.subplots(2, 4, figsize=(11, 6), sharex=True, sharey=True)
+fig, axes = plt.subplots(2, 4, figsize=(8, 6), sharex=True, sharey=True)
 
 for i, decline in enumerate(decline_conditions):
     for j, model in enumerate(models):
@@ -211,21 +211,25 @@ for i, decline in enumerate(decline_conditions):
         if i == 0:
             axes[i, j].set_title(model)
         if j == 0:
-            axes[i, j].set_ylabel(decline_labels[i])
+            axes[i, j].set_ylabel(decline_labels[i], fontsize=12)
         if i == 1:
             axes[i, j].set_xlabel('')
 
-axes[0, 0].legend(bbox_to_anchor=(-0.05, 1.29), loc='upper left', ncols=12,
-                  columnspacing=0.8, handletextpad=0.1)
+axes[0, 0].legend(bbox_to_anchor=(-0.35, 1.32), loc='upper left', ncols=12,
+                  columnspacing=0, handletextpad=0, fontsize=12)
 
 plt.xlim(-1, 20)
 plt.ylim(-5, 70)
 plt.xticks([0, 5, 10, 15, 20])
 plt.yticks([0, 14, 28, 42, 56, 70])
 
-fig.supxlabel("Today's refugia 'lost' to afforestation & bioenergy plantations (combined effect assuming all negative) [%]",
-              x=0.51, y=0.03)
-fig.supylabel("Today's refugia lost to global warming [%]", x=0.054)
+for ax_row in axes:
+    for ax in ax_row:
+        ax.tick_params(axis='both', labelsize=12) 
+
+fig.supxlabel("Today's refugia 'lost' to afforestation & bioenergy plantations\n(combined effect assuming all negative) [%]",
+              x=0.51, y=-0.025, fontsize=14)
+fig.supylabel("Today's refugia lost to global warming [%]", x=0.02, fontsize=14)
 
 plt.subplots_adjust(hspace=0.15, wspace=0.15)
 sns.despine()
@@ -236,7 +240,7 @@ plot_df2 = output_1.loc[output_1['RCP'].isin(rcps)]
 plot_norecover = plot_df2.query('Decline == "False"').reset_index()
 plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
-plt.figure(figsize=(2, 5))
+plt.figure(figsize=(1.5, 5.2))
 sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', 
              hue='RCP', palette=rcp_palette,linestyle='-')
 sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP', 
@@ -248,8 +252,8 @@ plt.ylim(0, 70)
 plt.xticks([2030, 2065, 2100])
 plt.xlabel('')
 plt.ylabel("Today's refugia lost to global warming and LUC\n(combined effect assuming all negative) [%]")
-plt.legend(bbox_to_anchor=(-0.4, 1.12), loc='upper left', ncols=4,
-           columnspacing=0.8, handletextpad=0.1)
+plt.legend(bbox_to_anchor=(1.19, 1.125), loc='upper right', ncols=4,
+           columnspacing=0.8, handletextpad=0.3, handlelength=1, fontsize=9.2)
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
 
