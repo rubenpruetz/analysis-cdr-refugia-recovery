@@ -304,10 +304,10 @@ for thres in thresholds:
         mpatches.Patch(color='gainsboro', label='No agreement')]
 
     ax.legend(bbox_to_anchor=(0.01, 0.32), handles=legend_patches, ncols=1,
-              loc='lower left', fontsize=12, columnspacing=0.8, handletextpad=0.5,
+              loc='lower left', fontsize=13, handletextpad=0.3,
               frameon=False)
 
-    plt.title(f'Model agreement {file_scenario} {file_year} \n({recovery} & min. loss of {thres}%)', fontsize=12,
+    plt.title(f'Model agreement {file_scenario} {file_year} \n({recovery} & min. loss of {thres}%)', fontsize=13,
               x=0.375, y=0.125, ha='left')
     plt.show()
 
@@ -355,7 +355,7 @@ for model in models:
                           facecolor=facecolor, edgecolor='black', linewidth=0.2)
 
     # plot legend
-    legend_ax = fig.add_axes([0.105, 0.375, 0.16, 0.16])
+    legend_ax = fig.add_axes([0.108, 0.375, 0.155, 0.155])
     for row in range(3):
         for col in range(3):
             color = color_matrix[2 - row][col]
@@ -363,15 +363,23 @@ for model in models:
 
     legend_ax.set_yticks([0.5, 1.5, 2.5])
     legend_ax.set_xticklabels(['', '', ''])
-    legend_ax.set_yticklabels(['25%', '50%', '100%'], fontsize=12)
-    legend_ax.set_xlabel('LUC loss', fontsize=12)
-    legend_ax.set_ylabel('Warm. loss', fontsize=12)
+    legend_ax.set_yticklabels(['0-25', '25-50', '50-100'], fontsize=13)
+    legend_ax.set_xlabel('LUC loss (%)', fontsize=13, labelpad=0.2)
+    label = legend_ax.set_ylabel('Warm. loss (%)', fontsize=13, labelpad=0.2)
+    label.set_bbox(dict(facecolor='white', edgecolor='none', pad=1))
     legend_ax.tick_params(axis='both', which='both', length=0)
     legend_ax.set_xlim(0, 3)
     legend_ax.set_ylim(0, 3)
     legend_ax.set_aspect('equal')
-    legend_ax.spines[:].set_visible(False)
-    fig.text(0.313, 0.27, f'{model} SSP2-26 2100\n{recovery}', fontsize=12)
+    
+    legend_ax.annotate('', xy=(3.5, 0), xytext=(0, 0),
+                       arrowprops=dict(arrowstyle='-|>', linewidth=0.8, 
+                                       fc='black'), annotation_clip=False)
+    legend_ax.annotate('', xy=(0, 3.5), xytext=(0, 0),
+                       arrowprops=dict(arrowstyle='-|>', linewidth=0.8, 
+                                       fc='black'), annotation_clip=False)
+    
+    fig.text(0.313, 0.27, f'{model} SSP2-26 2100\n({recovery})', fontsize=13)
     plt.show()
 
 # %% comparison of refugia impact at 1.5C before and after overshoot
@@ -477,10 +485,10 @@ for scenario in os_scenarios:
 
     cbar_os = plt.colorbar(img_os, ax=ax, orientation='horizontal', aspect=13, pad=0.16)
     cbar_os.ax.set_position([0.41, -0.165, 0.2, 0.501])
-    cbar_os.ax.tick_params(labelsize=7)
-    cbar_os.set_label('Difference in land-based mitigation within refugia at 1.5 °C\n(post- vs. pre-overshoot) [% cell area]',
-                      labelpad=1, fontsize=8)
-    plt.title(f'{scenario}', fontsize=8, ha='center')
+    cbar_os.ax.tick_params(labelsize=9)
+    cbar_os.set_label('Change in land-based mitigation in refugia at 1.5 °C\n(post- vs. pre-overshoot) [% cell area]',
+                      labelpad=1, fontsize=9)
+    plt.title(f'{scenario}', fontsize=9, ha='center')
     plt.show()
 
 # calculate share of 1.5 °C climate refugia that would be lost at 1.6 °C
