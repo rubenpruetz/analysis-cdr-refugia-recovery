@@ -241,10 +241,11 @@ plot_norecover = plot_df2.query('Decline == "False"').reset_index()
 plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
 plt.figure(figsize=(1.5, 5.2))
-sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc',
-             hue='RCP', palette=rcp_palette,linestyle='-')
+sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', hue='RCP',
+             palette=rcp_palette, linestyle='-', errorbar=('pi', 90))
 sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP',
-             palette=rcp_palette,linestyle='--', legend=False)
+             palette=rcp_palette, linestyle='--', errorbar=('pi', 90),
+             legend=False)
 sns.despine()
 
 plt.xlim(2030, 2100)
@@ -339,14 +340,14 @@ for thres in thresholds:
 
     legend_patches = [
         mpatches.Patch(color='crimson', label='More warm. loss'),
-        mpatches.Patch(color='mediumblue', label='More LUC loss'),
+        mpatches.Patch(color='mediumblue', label="More LUC 'loss'"),
         mpatches.Patch(color='gainsboro', label='No agreement')]
 
     ax.legend(bbox_to_anchor=(0.0, 0.3), handles=legend_patches, ncols=1,
               loc='lower left', fontsize=15, handlelength=0.65, handletextpad=0.3,
               frameon=False)
 
-    plt.title(f'Model agreement {file_scenario} {file_year} \n({recovery} & min. loss of {thres}%)',
+    plt.title(f"Model agreement {file_scenario} {file_year} \n({recovery} & min. 'loss' of {thres}%)",
               fontsize=15, x=0.375, y=0.125, ha='left')
     plt.show()
 
@@ -403,7 +404,7 @@ for model in models:
     legend_ax.set_yticks([0.5, 1.5, 2.5])
     legend_ax.set_xticklabels(['', '', ''])
     legend_ax.set_yticklabels(['0-25', '25-50', '50-100'], fontsize=15)
-    legend_ax.set_xlabel('LUC loss (%)', fontsize=15, labelpad=1)
+    legend_ax.set_xlabel("LUC 'loss' (%)", fontsize=15, labelpad=1)
     label = legend_ax.set_ylabel('Warm. loss (%)', fontsize=15, labelpad=1)
     label.set_bbox(dict(facecolor='white', edgecolor='none', pad=2.8))
     legend_ax.tick_params(axis='both', which='both', length=0)
@@ -557,7 +558,7 @@ output_1.rename(columns={'Model': 'model', 'Year': 'year', 'Decline': 'recovery'
                          'total_loss_perc': 'total_loss_percent'}, inplace=True)
 
 output_2.dropna(inplace=True)
-output_2.rename(columns={'warm_loss_perc': 'warming_loss_percent', 
+output_2.rename(columns={'warm_loss_perc': 'warming_loss_percent',
                          'luc_loss_perc': 'luc_loss_percent'}, inplace=True)
 
 with pd.ExcelWriter(path_project / 'output_data.xlsx',
