@@ -21,10 +21,10 @@ plt.rcParams.update({'figure.dpi': 600})
 
 path_project = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity')
 path_uea = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
-path_globiom = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/globiom_maps')
 path_aim = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/aim_maps')
-path_image = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/image_maps')
 path_gcam = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/gcam_maps')
+path_globiom = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/globiom_maps')
+path_image = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/image_maps')
 path_ar6_data = Path('/Users/rpruetz/Documents/phd/datasets')
 
 ar6_db = pd.read_csv(path_ar6_data / 'AR6_Scenarios_Database_World_v1.1.csv')
@@ -258,12 +258,12 @@ plt.legend(bbox_to_anchor=(1.19, 1.125), loc='upper right', ncols=4,
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
 
-# %% country-level agreement of warming vs LUC in SSP2-26 in 2050 and 2100
+# %% country-level agreement of warming vs LUC in SSP2-26 2100
 sf_path = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/wab')
 admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 
 # adjust if necessary
-thresholds = [5, 10]
+thresholds = [5, 10]  # use lower bound thresholds to exclude very low effects
 file_scenario = 'SSP2-26'
 file_year = '2100'
 
@@ -292,7 +292,7 @@ for thres in thresholds:
 
     loss_dfs = pd.concat(loss_dfs, ignore_index=True)
 
-    # exclude countries for which both losses are below 1% of national refugia
+    # exclude countries for which both losses are below x% of national refugia
     land_area_calculation(path_uea, 'bio1.3_bin.tif', 'bio1.3_bin_a.tif')
     refug_ref = rs.open(path_uea / 'bio1.3_bin_a.tif', masked=True)
     is03_refug_ref = admin_bound_calculator('iso3_refug_ref', admin_sf, refug_ref)
@@ -422,7 +422,7 @@ for model in models:
     fig.text(0.313, 0.27, f'{model} SSP2-26 2100\n({recovery})', fontsize=15)
     plt.show()
 
-# %% comparison of refugia impact at 1.5C before and after overshoot
+# %% comparison of refugia impact at 1.5 °C before and after overshoot
 os_df = ar6_data.copy()
 os_df.replace({'Model': {'AIM/CGE 2.0': 'AIM',
                          'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
@@ -432,7 +432,7 @@ os_df.replace({'Model': {'AIM/CGE 2.0': 'AIM',
 globiom_ssp119 = os_df.query('Model == "GLOBIOM" & Scenario == "SSP1-19"')
 aim_ssp226 = os_df.query('Model == "AIM" & Scenario == "SSP2-26"')
 
-# select last year before and first year after overshoot of 1.5C
+# select last year before and first year after overshoot of 1.5 °C
 globiom_os_yrs = globiom_ssp119[['Model', 'Scenario', '2035', '2069']].copy()
 aim_os_yrs = aim_ssp226[['Model', 'Scenario', '2035', '2098']].copy()
 
@@ -443,7 +443,7 @@ os_plot_df = pd.melt(os_plot_df, id_vars=['Model', 'Scenario'], var_name='Year',
 os_plot_df['ModScen'] = os_plot_df['Model'] + ' ' + os_plot_df['Scenario']
 os_plot_df['Year'] = os_plot_df['Year'].astype(int)
 
-# plot illustrative figure about overshoot period in selected scenarios
+# plot illustrative figure on overshoot duration in selected scenarios
 scen_pal = {'GLOBIOM SSP1-19': 'mediumvioletred', 'AIM SSP2-26': 'cornflowerblue'}
 plt.figure(figsize=(7, 3))
 plt.plot([2020, 2100], [1.5, 1.5], linewidth=1, linestyle='--', color='grey')
@@ -545,7 +545,7 @@ refug1p5 = pos_val_summer(refug1p5, squeeze=True)
 lost_share = (lost_ref / refug1p5) * 100
 print('Share of 1.5°C-refugia lost at 1.6 °C peak (%):', lost_share)
 
-# %% export data
+# %% export output data
 output_1 = output_1[['Model', 'scenario', 'Year', 'Decline', 'refug_ref_warm_loss',
                      'luc_in_refug_ref', 'total_loss', 'warm_loss_perc',
                      'luc_loss_perc', 'total_loss_perc']].copy()

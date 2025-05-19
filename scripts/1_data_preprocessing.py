@@ -14,28 +14,29 @@ from pathlib import Path
 from required_functions import *
 
 path_aim = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/aim_maps')
+path_gcam = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/gcam_maps')
 path_globiom = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/globiom_maps')
 path_image = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/image_maps')
 path_uea = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
 
 # load lookup table containing nc file information
-lookup_resample = pd.read_csv(
-    path_uea / 'lookup_table_uea_resample_20km.csv')
+lookup_resample = pd.read_csv(path_uea / 'lookup_table_uea_resample_20km.csv')
+lookup_interpol = pd.read_csv(path_uea / 'lookup_table_uea_interpol_20km.csv')
 
-lookup_interpol = pd.read_csv(
-    path_uea / 'lookup_table_uea_interpol_20km.csv')
+lookup_aim_nc_df = pd.read_csv(path_aim / 'lookup_table_aim_nc_files.csv')
+
+lookup_gcam_nc_df = pd.read_csv(path_gcam / 'lookup_table_gcam_nc_files.csv')
 
 lookup_globiom_nc_df = pd.read_csv(path_globiom / 'lookup_table_globiom_nc_files.csv')
 lookup_globiom_nc_df['year'] = lookup_globiom_nc_df['year'].astype(str)
 
-lookup_aim_nc_df = pd.read_csv(
-    path_aim / 'lookup_table_aim_nc_files.csv')
-
-lookup_image_nc_df = pd.read_csv(
-    path_image / 'lookup_table_image_nc_files.csv')
+lookup_image_nc_df = pd.read_csv(path_image / 'lookup_table_image_nc_files.csv')
 
 lookup_image_nc_pre = pd.read_csv(path_image /
                                   'lookup_table_image_nc_files_preprocessing.csv')
+
+# specify project resolution
+target_res = (0.1666666666670000019, 0.1666666666670000019)  # uea resolution
 
 # %% adjust names of biodiv files
 for index, row in lookup_resample.iterrows():  # use lookup to resample uea files
@@ -49,7 +50,7 @@ for index, row in lookup_resample.iterrows():  # use lookup to resample uea file
     with rs.open(path_uea / output_name, 'w', **profile) as dst:
         dst.write(tiff.astype(profile['dtype']))
 
-# linearily interpolate warmig level between rasters
+# linearily interpolate warming level between rasters
 inter_steps = 4  # number of desired interpolation steps
 
 for index, row in lookup_interpol.iterrows():  # use lookup to interpolate uea files
@@ -98,7 +99,70 @@ for input_file in input_files:
     output_file = input_file.replace('near.tif', 'bin.tif')
     binary_converter(input_file, path_uea, 0.75, output_file)
 
-# %% AIM, GLOBIOM, and IMAGE land use data processing:
+# %% AIM, GCAM, GLOBIOM, and IMAGE land use data processing:
+
+# preprocess GCAM data to resample and combine PFT data for forest and bioenergy
+unique_files = lookup_gcam_nc_df['input_file'].unique()
+for input_nc in unique_files:
+
+    # stack PFT variables into one DataArray and asign dimension coordinate
+    ds_gcam = xr.open_dataset(path_gcam / input_nc, decode_times=False)
+    pft_vars = [f'PFT{i}' for i in range(33)]
+    pft_data = xr.concat([ds_gcam[var] for var in pft_vars], dim="pft")
+    pft_data = pft_data.assign_coords(pft=np.arange(len(pft_vars)))
+
+    pft_data = pft_data.transpose('pft', 'latitude', 'longitude')
+    ds_new = xr.Dataset({"LC_area_share": pft_data})
+
+    ds_new = ds_new.sel(latitude=slice(None, None, -1))  # flip map
+    ds_new = ds_new.expand_dims(time=[0])  # add dummy time dimension
+    ds_new.to_netcdf(path_gcam / f'_{input_nc}')
+
+for index, row in lookup_gcam_nc_df.iterrows():
+    input_nc = row['input_file']
+    band = row['band']
+    output_name = row['output_name']
+
+    nc_file = rioxarray.open_rasterio(path_gcam / f'_{input_nc}',
+                                      decode_times=False,
+                                      band_as_variable=True)
+    data_array_proj = nc_file.rio.write_crs('EPSG:4326')
+    data_array_proj = data_array_proj['band_' + str(band)]  # bands are pft+1
+    data_array_proj.rio.to_raster(path_gcam / 'temp_large_file.tif',
+                                  driver='GTiff')
+
+    tiff_resampler(path_gcam / 'temp_large_file.tif',
+                   target_res,
+                   'average',  #######################################################
+                   path_gcam / output_name)
+
+scenarios = lookup_gcam_nc_df['scenario'].unique()
+scenarios = scenarios.astype(str)
+years = lookup_gcam_nc_df['year'].unique()
+years = years.astype(str)
+
+for scenario in scenarios:
+    for year in years:
+
+        forest_dict = {}
+        for i in range(1, 9):
+            f_file = f'GCAM_PFT{i}_Forest_{scenario}_{year}.tif'
+            forest_dict[f'f_{i}'] = rioxarray.open_rasterio(path_gcam / f_file,
+                                                            masked=True)
+        total_forest = sum(forest_dict.values())
+        total_forest = total_forest * 0.01  # 0-100 --> 0-1
+        total_f_name = f'GCAM_Forest_total_{scenario}_{year}.tif'
+        total_forest.rio.to_raster(path_gcam / total_f_name, driver='GTiff')
+
+        bioenergy_dict = {}
+        for i in range(29, 31):
+            b_file = f'GCAM_PFT{i}_Bioenergy plantation_{scenario}_{year}.tif'
+            bioenergy_dict[f'f_{i}'] = rioxarray.open_rasterio(path_gcam / b_file,
+                                                               masked=True)
+        total_bioenergy = sum(bioenergy_dict.values())
+        total_bioenergy = total_bioenergy * 0.01  # 0-100 --> 0-1
+        total_b_name = f'GCAM_Bioenergy_{scenario}_{year}.tif'
+        total_bioenergy.rio.to_raster(path_gcam / total_b_name, driver='GTiff')
 
 # preprocess GLOBIOM data to order dimensions and to select the data variable
 for i in lookup_globiom_nc_df['nc_file'].unique().tolist():
@@ -129,27 +193,27 @@ for index, row in lookup_image_nc_pre.iterrows():
     nc_file_xr.to_netcdf(path_image / output_name)
 
 # %% write crs, convert to tif, and create individual tifs per year and variable
-target_res = (0.1666666666670000019, 0.1666666666670000019)  # uea resolution
 land_infos = np.array(['Afforestation', 'Bioenergy', 'cropland_other',
                        'forest_total', 'Cropland_total'])  # define for later
 
 start = time()
 
-models = ['AIM', 'GLOBIOM', 'IMAGE']  # AIM, GLOBIOM, and IMAGE
+models = ['AIM', 'GLOBIOM', 'IMAGE']
+models_all = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE']
 
 for model in models:
 
-    if model == 'GLOBIOM':
-        path = path_globiom
-        lookup_table = lookup_globiom_nc_df
-    elif model == 'AIM':
+    if model == 'AIM':
         path = path_aim
         lookup_table = lookup_aim_nc_df
+    elif model == 'GLOBIOM':
+        path = path_globiom
+        lookup_table = lookup_globiom_nc_df
     elif model == 'IMAGE':
         path = path_image
         lookup_table = lookup_image_nc_df
 
-    for index, row in lookup_table.iterrows():  # use lookup to resample uea files
+    for index, row in lookup_table.iterrows():  # use lookup to resample files
         input_file = row['nc_file']
         band = row['band']
         output_name = row['output_name']
@@ -170,7 +234,7 @@ for model in models:
             dst.write(data, 1)
 
         # resample land use data to resolution of biodiv data
-        tiff_resampler(path / output_name, target_res, 'nearest',
+        tiff_resampler(path / output_name, target_res, 'nearest',  ##### is that wrong for GLOBIOM and GCAM?
                        path / output_name)
 
     # compute total bioenergy and forest per scenario and year
@@ -221,20 +285,38 @@ for model in models:
                 print(f'Error processing: {e}')
                 continue
 
-    # compute afforestation for all years vs 2010
+for model in models_all:
+
+    if model == 'AIM':
+        path = path_aim
+        base_year = 2010
+        lookup_table = lookup_aim_nc_df
+    elif model == 'GCAM':
+        path = path_globiom
+        base_year = 2020
+    elif model == 'GLOBIOM':
+        path = path_globiom
+        base_year = 2010
+        lookup_table = lookup_globiom_nc_df
+    elif model == 'IMAGE':
+        path = path_image
+        base_year = 2010
+        lookup_table = lookup_image_nc_df
+
+    # compute afforestation for all years vs base year
     for scenario in scenarios:
-        file_2010 = f'{model}_forest_total_{scenario}_2010.tif'
+        file_baseyr = f'{model}_forest_total_{scenario}_{base_year}.tif'
 
         for year in years:
             forest_file = f'{model}_forest_total_{scenario}_{year}.tif'
             ar_file_yr = f'{model}_Afforestation_{scenario}_{year}.tif'
 
-            forest_2010 = rioxarray.open_rasterio(
-                path / file_2010, masked=True)
+            forest_base_yr = rioxarray.open_rasterio(
+                path / file_baseyr, masked=True)
             forest_yr = rioxarray.open_rasterio(
                 path / forest_file, masked=True)
 
-            forest_change = (forest_yr - forest_2010)  # -ve=loss; +ve=gain
+            forest_change = (forest_yr - forest_base_yr)  # -ve=loss; +ve=gain
 
             gain_yr = forest_change.where(
                 (forest_change > 0) | forest_change.isnull(), 0)
@@ -277,7 +359,7 @@ print(f'Runtime {(end - start) / 60} min')
 
 # %% test alignment between spatial data and AR6 data concerning land cover
 
-scenario_set = ['SSP1-19', 'SSP2-26', 'SSP3-34']
+scenario_set = ['SSP2-26', 'SSP3-45']
 year_set = [2020, 2050, 2100]
 
 for model in models:

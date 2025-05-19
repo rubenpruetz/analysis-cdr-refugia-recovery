@@ -48,8 +48,8 @@ def binary_converter(input_tif,  # input tif (string)
                      threshold,  # minimum value (integer)
                      output_name):  # specify output name (string)
     with rs.open(filepath / input_tif) as src:
-        data = src.read()  # Read the GeoTIFF
-        profile = src.profile  # Get metadata of GeoTiff
+        data = src.read()  # read the GeoTIFF
+        profile = src.profile  # get metadata of GeoTiff
 
     output_data = np.where(data >= threshold, 1,
                            np.where(data < threshold, 0, data))
@@ -110,7 +110,7 @@ def overlay_calculator(input_tif,  # land use model input file (string)
                        bio_select,  # defined in the analysis script
                        file_scenario,  # input file SSP-RCP scenario (string)
                        mitigation_option,  # 'Afforestation' or 'Bioenergy'
-                       biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
+                       biodiv_ref_warm_file,  # Bio file for ref warm (1.3 °C)
                        lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
 
     # STEP1: load files for LUC, refugia, and baseline refugia
@@ -184,7 +184,7 @@ def warm_vs_luc_plotter(filepath,  # filepath input file
                         admin_sf,  # administrative boundary shapefile
                         bio_select,  # defined in the analysis script
                         file_scenario,  # input file SSP-RCP scenario (string)
-                        biodiv_ref_warm_file,  # Bio file for ref warm (1.3C)
+                        biodiv_ref_warm_file,  # Bio file for ref warm (1.3 °C)
                         lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
 
     # STEP1: load files for LUC, refugia, and baseline refugia
@@ -226,7 +226,7 @@ def warm_vs_luc_plotter(filepath,  # filepath input file
     loss_df = pd.merge(warm_df, luc_df, on='iso3', how='outer',
                        suffixes=['_warm', '_luc'])
 
-    # asign values 1 = warm > luc; -1 = warm < luc; 0 = warm == luc
+    # assign values: 1 = warm > luc; -1 = warm < luc; nan = warm == luc
     loss_df['impact'] = np.where(loss_df['km2_warm'] >
                                  loss_df['km2_luc'], 1,
                                  np.where(loss_df['km2_warm'] <
@@ -239,8 +239,8 @@ def pos_val_summer(arr, squeeze=True):
     if squeeze:
         arr = np.squeeze(arr)
 
-    arr = np.clip(arr, 0, None)  # Set values below zero to 0
-    return np.nansum(arr)  # Sum only non-NaN values
+    arr = np.clip(arr, 0, None)  # set values below zero to 0
+    return np.nansum(arr)  # sum only non-NaN values
 
 # function to concat multiple dfs across models
 def load_and_concat(suffix, paths):
@@ -279,7 +279,7 @@ def land_cover_interpolator(model,
             with rs.open(filepath / output_name, "w", **profile_updated) as dst:
                 dst.write(tiff_target.astype(rs.float32), 1)
 
-# function to compare impact on refugia before and after overshoot of 1.5C
+# function to compare impact on refugia before and after overshoot of 1.5 °C
 def os_land_in_refugia_calculator(model,
                                   filepath,
                                   scenario,
