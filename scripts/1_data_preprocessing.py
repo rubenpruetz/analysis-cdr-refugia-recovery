@@ -37,6 +37,7 @@ lookup_image_nc_pre = pd.read_csv(path_image /
 
 # specify project resolution
 target_res = (0.1666666666670000019, 0.1666666666670000019)  # uea resolution
+land_infos = np.array(['Afforestation', 'Bioenergy'])  # define for later
 
 # %% adjust names of biodiv files
 for index, row in lookup_resample.iterrows():  # use lookup to resample uea files
@@ -131,9 +132,7 @@ for index, row in lookup_gcam_nc_df.iterrows():
     data_array_proj.rio.to_raster(path_gcam / 'temp_large_file.tif',
                                   driver='GTiff')
 
-    tiff_resampler(path_gcam / 'temp_large_file.tif',
-                   target_res,
-                   'average',  #######################################################
+    tiff_resampler(path_gcam / 'temp_large_file.tif', target_res, 'nearest',
                    path_gcam / output_name)
 
 scenarios = lookup_gcam_nc_df['scenario'].unique()
@@ -151,7 +150,8 @@ for scenario in scenarios:
                                                             masked=True)
         total_forest = sum(forest_dict.values())
         total_forest = total_forest * 0.01  # 0-100 --> 0-1
-        total_f_name = f'GCAM_Forest_total_{scenario}_{year}.tif'
+        total_forest = total_forest.clip(max=1) # cap at 1
+        total_f_name = f'GCAM_forest_total_{scenario}_{year}.tif'
         total_forest.rio.to_raster(path_gcam / total_f_name, driver='GTiff')
 
         bioenergy_dict = {}
@@ -161,8 +161,50 @@ for scenario in scenarios:
                                                                masked=True)
         total_bioenergy = sum(bioenergy_dict.values())
         total_bioenergy = total_bioenergy * 0.01  # 0-100 --> 0-1
+        total_bioenergy = total_bioenergy.clip(max=1) # cap at 1
         total_b_name = f'GCAM_Bioenergy_{scenario}_{year}.tif'
         total_bioenergy.rio.to_raster(path_gcam / total_b_name, driver='GTiff')
+
+# compute afforestation for all years vs base year
+for scenario in scenarios:
+    file_baseyr = f'GCAM_forest_total_{scenario}_2020.tif'
+
+    for year in years:
+        forest_file = f'GCAM_forest_total_{scenario}_{year}.tif'
+        ar_file_yr = f'GCAM_Afforestation_{scenario}_{year}.tif'
+
+        forest_base_yr = rioxarray.open_rasterio(path_gcam / file_baseyr, masked=True)
+        forest_yr = rioxarray.open_rasterio(path_gcam / forest_file, masked=True)
+
+        forest_change = (forest_yr - forest_base_yr)  # -ve=loss; +ve=gain
+
+        gain_yr = forest_change.where(
+            (forest_change > 0) | forest_change.isnull(), 0)
+
+        gain_yr.rio.to_raster(path_gcam / ar_file_yr, driver='GTiff')
+
+# calculate grid area based on arbitrarily chosen input file
+arbit_input = rioxarray.open_rasterio(path_gcam / 
+                                      'GCAM_Afforestation_SSP2-26_2050.tif', 
+                                      masked=True)
+
+bin_land = arbit_input.where(arbit_input.isnull(), 1)  # all=1 if not nodata
+bin_land.rio.to_raster(path_gcam / 'bin_land.tif', driver='GTiff')
+
+land_area_calculation(path_gcam, 'bin_land.tif', 'GCAM_max_land_area_km2.tif')
+max_land_area = rioxarray.open_rasterio(path_gcam / 'GCAM_max_land_area_km2.tif',
+                                        masked=True)
+
+# calculate land use areas based on total surface and land use fractions
+for land_info in land_infos:
+    for scenario in scenarios:
+        for year in years:
+
+            processing = f'GCAM_{land_info}_{scenario}_{year}.tif'
+            land_fract = rioxarray.open_rasterio(path_gcam / processing, masked=True)
+            land_fract = land_fract.rio.reproject_match(max_land_area)
+            land_area = land_fract * max_land_area
+            land_area.rio.to_raster(path_gcam / processing, driver='GTiff')
 
 # preprocess GLOBIOM data to order dimensions and to select the data variable
 for i in lookup_globiom_nc_df['nc_file'].unique().tolist():
@@ -193,13 +235,9 @@ for index, row in lookup_image_nc_pre.iterrows():
     nc_file_xr.to_netcdf(path_image / output_name)
 
 # %% write crs, convert to tif, and create individual tifs per year and variable
-land_infos = np.array(['Afforestation', 'Bioenergy', 'cropland_other',
-                       'forest_total', 'Cropland_total'])  # define for later
-
 start = time()
 
 models = ['AIM', 'GLOBIOM', 'IMAGE']
-models_all = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE']
 
 for model in models:
 
@@ -234,7 +272,7 @@ for model in models:
             dst.write(data, 1)
 
         # resample land use data to resolution of biodiv data
-        tiff_resampler(path / output_name, target_res, 'nearest',  ##### is that wrong for GLOBIOM and GCAM?
+        tiff_resampler(path / output_name, target_res, 'nearest',
                        path / output_name)
 
     # compute total bioenergy and forest per scenario and year
@@ -285,27 +323,9 @@ for model in models:
                 print(f'Error processing: {e}')
                 continue
 
-for model in models_all:
-
-    if model == 'AIM':
-        path = path_aim
-        base_year = 2010
-        lookup_table = lookup_aim_nc_df
-    elif model == 'GCAM':
-        path = path_globiom
-        base_year = 2020
-    elif model == 'GLOBIOM':
-        path = path_globiom
-        base_year = 2010
-        lookup_table = lookup_globiom_nc_df
-    elif model == 'IMAGE':
-        path = path_image
-        base_year = 2010
-        lookup_table = lookup_image_nc_df
-
     # compute afforestation for all years vs base year
     for scenario in scenarios:
-        file_baseyr = f'{model}_forest_total_{scenario}_{base_year}.tif'
+        file_baseyr = f'{model}_forest_total_{scenario}_2010.tif'
 
         for year in years:
             forest_file = f'{model}_forest_total_{scenario}_{year}.tif'
