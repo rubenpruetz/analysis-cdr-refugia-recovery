@@ -104,9 +104,7 @@ for input_file in input_files:
 
 # preprocess GCAM data to resample and combine PFT data for forest and bioenergy
 unique_files = lookup_gcam_nc_df['input_file'].unique()
-for input_nc in unique_files:
-
-    # stack PFT variables into one DataArray and asign dimension coordinate
+for input_nc in unique_files:  # stack PFT variables into one DataArray
     ds_gcam = xr.open_dataset(path_gcam / input_nc, decode_times=False)
     pft_vars = [f'PFT{i}' for i in range(33)]
     pft_data = xr.concat([ds_gcam[var] for var in pft_vars], dim="pft")
@@ -165,8 +163,7 @@ for scenario in scenarios:
         total_b_name = f'GCAM_Bioenergy_{scenario}_{year}.tif'
         total_bioenergy.rio.to_raster(path_gcam / total_b_name, driver='GTiff')
 
-# compute afforestation for all years vs base year
-for scenario in scenarios:
+for scenario in scenarios:  # compute afforestation for all years vs base year
     file_baseyr = f'GCAM_forest_total_{scenario}_2020.tif'
 
     for year in years:
@@ -183,9 +180,8 @@ for scenario in scenarios:
 
         gain_yr.rio.to_raster(path_gcam / ar_file_yr, driver='GTiff')
 
-# calculate grid area based on arbitrarily chosen input file
-arbit_input = rioxarray.open_rasterio(path_gcam / 
-                                      'GCAM_Afforestation_SSP2-26_2050.tif', 
+arbit_input = rioxarray.open_rasterio(path_gcam /  # calculate grid area
+                                      'GCAM_Afforestation_SSP2-26_2050.tif',
                                       masked=True)
 
 bin_land = arbit_input.where(arbit_input.isnull(), 1)  # all=1 if not nodata
@@ -195,8 +191,7 @@ land_area_calculation(path_gcam, 'bin_land.tif', 'GCAM_max_land_area_km2.tif')
 max_land_area = rioxarray.open_rasterio(path_gcam / 'GCAM_max_land_area_km2.tif',
                                         masked=True)
 
-# calculate land use areas based on total surface and land use fractions
-for land_info in land_infos:
+for land_info in land_infos:  # calculate areas based on surface and land use fractions
     for scenario in scenarios:
         for year in years:
 

@@ -57,7 +57,7 @@ ar6_data_stab = ar6_data_stab.rename(columns={f'{year}_max': str(year) for year 
 ar6_data = ar6_data[['Model', 'Scenario'] + all_years].copy()
 
 # %% choose between biodiv recovery or no recovery after peak warming
-temperature_decline = 'not_allowed'  # options: 'allowed' or 'not_allowed'
+temperature_decline = 'allowed'  # options: 'allowed' or 'not_allowed'
 
 if temperature_decline == 'allowed':
     warm_file = ar6_data.copy()
@@ -218,7 +218,7 @@ for i, decline in enumerate(decline_conditions):
 axes[0, 0].legend(bbox_to_anchor=(-0.35, 1.32), loc='upper left', ncols=12,
                   columnspacing=0, handletextpad=0, fontsize=12)
 
-plt.xlim(-1, 20)
+plt.xlim(-1, 20.5)
 plt.ylim(-5, 70)
 plt.xticks([0, 5, 10, 15, 20])
 plt.yticks([0, 14, 28, 42, 56, 70])
@@ -291,6 +291,9 @@ for thres in thresholds:
         loss_dfs.append(loss_df)
 
     loss_dfs = pd.concat(loss_dfs, ignore_index=True)
+    loss_dfs['scenario'] = file_scenario
+    loss_dfs['year'] = file_year
+    loss_dfs['recovery'] = recovery
 
     # exclude countries for which both losses are below x% of national refugia
     land_area_calculation(path_uea, 'bio1.3_bin.tif', 'bio1.3_bin_a.tif')
@@ -352,7 +355,8 @@ for thres in thresholds:
     plt.show()
 
 # %% bivariate maps of warming vs LUC at country level per model (SSP2-26 2100)
-output_2 = loss_dfs[['model', 'iso3', 'warm_loss_perc', 'luc_loss_perc']].copy()
+output_2 = loss_dfs[['model', 'scenario', 'year', 'recovery', 'iso3',
+                     'warm_loss_perc', 'luc_loss_perc']].copy()
 
 for model in models:
     bivar_map = output_2.query('model == @model').reset_index()
@@ -556,6 +560,7 @@ output_1.rename(columns={'Model': 'model', 'Year': 'year', 'Decline': 'recovery'
                          'warm_loss_perc': 'warming_loss_percent',
                          'luc_loss_perc': 'luc_loss_percent',
                          'total_loss_perc': 'total_loss_percent'}, inplace=True)
+output_1.replace({'recovery': {'True': 'Full recovery', 'False': 'No recovery'}}, inplace=True)
 
 output_2.dropna(inplace=True)
 output_2.rename(columns={'warm_loss_perc': 'warming_loss_percent',
