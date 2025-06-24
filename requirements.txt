@@ -1,10 +1,10 @@
 Cartopy==0.24.1
-matplotlib==3.10.3
-numpy==2.2.6
+matplotlib==3.10.1
+numpy==1.26.4
 pandas==2.2.3
 pyshp==2.3.1
 rasterio==1.4.3
 rioxarray==0.18.1
 seaborn==0.13.2
-Shapely==2.1.1
+shapely==2.1.0
 xarray==2024.11.0
