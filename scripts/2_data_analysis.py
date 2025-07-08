@@ -242,10 +242,11 @@ plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
 plt.figure(figsize=(1.5, 5.2))
 sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', hue='RCP',
-             palette=rcp_palette, linestyle='-', errorbar=('pi', 90))
+             palette=rcp_palette, linestyle='-', errorbar=('pi', 90),
+             estimator='median')
 sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP',
              palette=rcp_palette, linestyle='--', errorbar=('pi', 90),
-             legend=False)
+             estimator='median', legend=False)
 sns.despine()
 
 plt.xlim(2030, 2100)
