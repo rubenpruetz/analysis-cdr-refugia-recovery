@@ -43,7 +43,7 @@ variable = ['AR6 climate diagnostics|Surface Temperature (GSAT)|MAGICCv7.5.3|50.
 ar6_data = ar6_db.loc[ar6_db['Variable'].isin(variable)]
 ar6_data = ar6_data.loc[ar6_data['Model'].isin(models)]
 ar6_data = ar6_data.loc[ar6_data['Scenario'].isin(scenarios)]
-ar6_data = ar6_data.round(1)  # round temperatures
+ar6_data = ar6_data.round(2)  # round temperatures
 
 # allow no temperature decline by calculating peak warming up until each year
 for year in range(2021, 2101):
