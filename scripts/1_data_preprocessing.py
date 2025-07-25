@@ -142,7 +142,7 @@ for scenario in scenarios:
     for year in years:
 
         forest_dict = {}
-        for i in range(1, 12):
+        for i in range(1, 9):  # PFT 1-8 as in Chen et al. 2020
             f_file = f'GCAM_PFT{i}_Forest_{scenario}_{year}.tif'
             forest_dict[f'f_{i}'] = rioxarray.open_rasterio(path_gcam / f_file,
                                                             masked=True)
