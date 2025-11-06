@@ -25,6 +25,7 @@ path_aim = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/
 path_gcam = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/gcam_maps')
 path_globiom = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/globiom_maps')
 path_image = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/image_maps')
+path_magpie = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/magpie_maps')
 path_ar6_data = Path('/Users/rpruetz/Documents/phd/datasets')
 
 ar6_db = pd.read_csv(path_ar6_data / 'AR6_Scenarios_Database_World_v1.1.csv')
@@ -34,10 +35,10 @@ lookup_mi_luc_df['year'] = lookup_mi_luc_df['year'].astype(str)
 # %% get temperatures for SSP-RCP combinations
 all_years = [str(year) for year in range(2020, 2101)]
 
-models = ['MESSAGE-GLOBIOM 1.0', 'AIM/CGE 2.0', 'GCAM 4.2', 'IMAGE 3.0.1']
-scenarios = ['SSP1-Baseline', 'SSP1-19', 'SSP1-26', 'SSP1-34', 'SSP1-45',
-             'SSP2-Baseline', 'SSP2-19', 'SSP2-26', 'SSP2-34', 'SSP2-45',
-             'SSP2-60', 'SSP3-Baseline', 'SSP3-34', 'SSP3-45', 'SSP3-60']
+models = ['MESSAGE-GLOBIOM 1.0', 'AIM/CGE 2.0', 'GCAM 4.2', 'IMAGE 3.0.1',
+          'REMIND-MAgPIE 1.5']
+scenarios = ['SSP1-19', 'SSP1-26', 'SSP1-34', 'SSP1-45', 'SSP2-19', 'SSP2-26',
+             'SSP2-34', 'SSP2-45', 'SSP3-34', 'SSP3-45']
 variable = ['AR6 climate diagnostics|Surface Temperature (GSAT)|MAGICCv7.5.3|50.0th Percentile']
 
 ar6_data = ar6_db.loc[ar6_db['Variable'].isin(variable)]
@@ -75,7 +76,8 @@ bio_select.reset_index(inplace=True)
 bio_select.replace({'Model': {'AIM/CGE 2.0': 'AIM',
                               'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
                               'GCAM 4.2': 'GCAM',
-                              'IMAGE 3.0.1': 'IMAGE'}}, inplace=True)
+                              'IMAGE 3.0.1': 'IMAGE',
+                              'REMIND-MAgPIE 1.5': 'MAgPIE'}}, inplace=True)
 
 # specify years for the analysis
 years = ['2030', '2040', '2050', '2060', '2070', '2080', '2090', '2100']
@@ -83,7 +85,7 @@ lookup_sub_yrs = lookup_mi_luc_df.copy()
 lookup_sub_yrs = lookup_sub_yrs.loc[lookup_sub_yrs['year'].isin(years)]
 
 # %% choose model to run the script with
-models = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE']
+models = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE', 'MAgPIE']
 
 for model in models:
     if model == 'GLOBIOM':
@@ -94,6 +96,8 @@ for model in models:
         path = path_image
     elif model == 'GCAM':
         path = path_gcam
+    elif model == 'MAgPIE':
+        path = path_magpie
 
     start = time()  # runtime monitoring
 
@@ -173,7 +177,8 @@ for model in models:
 
 # %% plot warming versus land use change impact on refugia
 # note: previous code needs to run first in BOTH modes: 'allowed' & 'not_allowed'
-paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom, 'IMAGE': path_image}
+paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom, 
+         'IMAGE': path_image, 'MAgPIE': path_magipe}
 decline_df = load_and_concat('area_df_temp_decline_allowed', paths)
 decline_df['Decline'] = 'True'
 nodecline_df = load_and_concat('area_df_temp_decline_not_allowed', paths)
@@ -281,6 +286,8 @@ for thres in thresholds:
             path = path_image
         elif model == 'GCAM':
             path = path_gcam
+        elif model == 'MAgPIE':
+            path = path_magpie
 
         loss_df = warm_vs_luc_plotter(path,
                                       file_year,
