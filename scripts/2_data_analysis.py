@@ -178,7 +178,7 @@ for model in models:
 # %% plot warming versus land use change impact on refugia
 # note: previous code needs to run first in BOTH modes: 'allowed' & 'not_allowed'
 paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom, 
-         'IMAGE': path_image, 'MAgPIE': path_magipe}
+         'IMAGE': path_image, 'MAgPIE': path_magpie}
 decline_df = load_and_concat('area_df_temp_decline_allowed', paths)
 decline_df['Decline'] = 'True'
 nodecline_df = load_and_concat('area_df_temp_decline_not_allowed', paths)
@@ -198,7 +198,7 @@ decline_labels = ['No recovery', 'Full recovery']
 rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320',
                '45': '#e71d24', '60': '#951b1d', 'Baseline': 'dimgrey'}
 
-fig, axes = plt.subplots(2, 4, figsize=(8, 6), sharex=True, sharey=True)
+fig, axes = plt.subplots(2, 5, figsize=(8, 6), sharex=True, sharey=True)
 
 for i, decline in enumerate(decline_conditions):
     for j, model in enumerate(models):
