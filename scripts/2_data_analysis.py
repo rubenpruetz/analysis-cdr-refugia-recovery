@@ -195,8 +195,7 @@ plot_df = plot_df.loc[plot_df['SSP'].isin(['SSP2'])]
 decline_conditions = ['False', 'True']
 decline_labels = ['No recovery', 'Full recovery']
 
-rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320',
-               '45': '#e71d24', '60': '#951b1d', 'Baseline': 'dimgrey'}
+rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320', '45': '#e71d24'}
 
 fig, axes = plt.subplots(2, 5, figsize=(8, 6), sharex=True, sharey=True)
 
@@ -214,7 +213,9 @@ for i, decline in enumerate(decline_conditions):
         axes[i, j].plot([0, 30], [0, 30], linestyle='--', color='grey')
 
         if i == 0:
-            axes[i, j].set_title(model)
+            if model == 'MAgPIE':
+                axes[i, j].set_title('REMIND-MAgPIE')
+            else: axes[i, j].set_title(model)
         if j == 0:
             axes[i, j].set_ylabel(decline_labels[i], fontsize=12)
         if i == 1:
@@ -232,7 +233,7 @@ for ax_row in axes:
     for ax in ax_row:
         ax.tick_params(axis='both', labelsize=12)
 
-fig.supxlabel("Today's refugia 'lost' to afforestation & bioenergy plantations\n(combined effect assuming all negative) [%]",
+fig.supxlabel("Today's refugia 'lost' to forestation & bioenergy plantations\n(combined effect assuming all negative) [%]",
               x=0.51, y=-0.025, fontsize=14)
 fig.supylabel("Today's refugia lost to global warming [%]", x=0.02, fontsize=14)
 
@@ -241,7 +242,10 @@ sns.despine()
 plt.show()
 
 #%% plot combined refugia loss from global warming and mitigation
-plot_df2 = output_1.loc[output_1['RCP'].isin(rcps)]
+rcps_float = [float(r) for r in rcps]
+rcp_palette = {19: '#00adcf', 26: '#173c66', 34: '#f79320', 45: '#e71d24'}
+
+plot_df2 = output_1.loc[output_1['RCP'].isin(rcps_float)]
 plot_norecover = plot_df2.query('Decline == "False"').reset_index()
 plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
