@@ -435,15 +435,16 @@ for model in models:
                        arrowprops=dict(arrowstyle='-|>', linewidth=0.8,
                                        fc='black'), annotation_clip=False)
 
-    fig.text(0.313, 0.27, f'{model} SSP2-26 2100\n({recovery})', fontsize=15)
+    model_name = model
+    if model == 'MAgPIE':
+        model_name = 'REMIND-MAgPIE'
+    fig.text(0.313, 0.27, f'{model_name} SSP2-26 2100\n({recovery})', fontsize=15)
     plt.show()
 
 # %% comparison of refugia impact at 1.5 °C before and after overshoot
 os_df = ar6_data.copy()
-os_df.replace({'Model': {'AIM/CGE 2.0': 'AIM',
-                         'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
-                         'GCAM 4.2': 'GCAM',
-                         'IMAGE 3.0.1': 'IMAGE'}}, inplace=True)
+os_df.replace({'Model': {'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
+                         'REMIND-MAgPIE 1.5': 'MAgPIE'}}, inplace=True)
 
 globiom_ssp119 = os_df.query('Model == "GLOBIOM" & Scenario == "SSP1-19"')
 aim_ssp226 = os_df.query('Model == "AIM" & Scenario == "SSP2-26"')
