@@ -352,13 +352,14 @@ for thres in thresholds:
                               edgecolor='black', linewidth=0.2)
 
     ax.coastlines(linewidth=0.2)
+    ax.set_aspect(1.1)
 
     legend_patches = [
         mpatches.Patch(color='crimson', label='More warm. loss'),
         mpatches.Patch(color='mediumblue', label="More LUC 'loss'"),
         mpatches.Patch(color='gainsboro', label='No agreement')]
 
-    ax.legend(bbox_to_anchor=(0.0, 0.3), handles=legend_patches, ncols=1,
+    ax.legend(bbox_to_anchor=(0.0, 0.315), handles=legend_patches, ncols=1,
               loc='lower left', fontsize=15, handlelength=0.65, handletextpad=0.3,
               frameon=False)
 
@@ -393,6 +394,7 @@ for model in models:
     ax = plt.axes([0.05, 0.05, 0.7, 0.9], projection=ccrs.Robinson())
     ax.set_global()
     ax.coastlines()
+    ax.set_aspect(1.1)
     ax.add_feature(cfeature.BORDERS, linewidth=0.2)
 
     for sr in admin_sf.shapeRecords():
@@ -462,7 +464,7 @@ os_plot_df['Year'] = os_plot_df['Year'].astype(int)
 
 # plot illustrative figure on overshoot duration in selected scenarios
 scen_pal = {'GLOBIOM SSP1-19': 'mediumvioletred', 'REMIND-MAgPIE SSP1-19': 'cornflowerblue'}
-plt.figure(figsize=(7, 3))
+plt.figure(figsize=(10, 1.6))
 plt.plot([2020, 2100], [1.5, 1.5], linewidth=1, linestyle='--', color='grey')
 plt.plot([2032, 2032], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
 plt.plot([2033, 2033], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
@@ -476,9 +478,9 @@ plt.xticks([2025, 2030, 2050, 2070, 2075])
 plt.yticks([1.3, 1.5, 1.55, 1.6, 1.65])
 sns.despine()
 plt.xlabel('')
-plt.ylabel('Rounded median global warming\n[°C] (MAGICCv7.5.3)')
-plt.legend(bbox_to_anchor=(0, 1.15), loc='upper left',
-           columnspacing=1, handletextpad=0.4, ncols=2)
+plt.ylabel('Global warming [°C]\n(MAGICCv7.5.3)')
+plt.legend(bbox_to_anchor=(0, 1.25), loc='upper left', fontsize=9,
+           columnspacing=1, handletextpad=0.5, ncols=2, handlelength=0.2)
 plt.show()
 
 # estimate land for AR and bioenergy for the start and end year of overshoot
@@ -540,6 +542,7 @@ for scenario in os_scenarios:
                        origin='upper', cmap='PuOr', norm=norm_os, alpha=1)
 
     ax.coastlines(linewidth=0.2)
+    ax.set_aspect(1.1)
 
     cbar_os = plt.colorbar(img_os, ax=ax, orientation='horizontal', aspect=13, pad=0.16)
     cbar_os.ax.set_position([0.41, -0.165, 0.2, 0.501])
