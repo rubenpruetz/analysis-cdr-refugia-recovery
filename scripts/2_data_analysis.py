@@ -477,7 +477,7 @@ plt.yticks([1.3, 1.5, 1.55, 1.6, 1.65])
 sns.despine()
 plt.xlabel('')
 plt.ylabel('Rounded median global warming\n[°C] (MAGICCv7.5.3)')
-plt.legend(bbox_to_anchor=(0, 1.25), loc='upper left',
+plt.legend(bbox_to_anchor=(0, 1.15), loc='upper left',
            columnspacing=1, handletextpad=0.4, ncols=2)
 plt.show()
 
