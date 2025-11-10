@@ -444,16 +444,16 @@ for model in models:
 # %% comparison of refugia impact at 1.5 °C before and after overshoot
 os_df = ar6_data.copy()
 os_df.replace({'Model': {'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
-                         'REMIND-MAgPIE 1.5': 'MAgPIE'}}, inplace=True)
+                         'REMIND-MAgPIE 1.5': 'REMIND-MAgPIE'}}, inplace=True)
 
 globiom_ssp119 = os_df.query('Model == "GLOBIOM" & Scenario == "SSP1-19"')
-aim_ssp226 = os_df.query('Model == "AIM" & Scenario == "SSP2-26"')
+magpie_ssp119 = os_df.query('Model == "REMIND-MAgPIE" & Scenario == "SSP1-19"')
 
 # select last year before and first year after overshoot of 1.5 °C
-globiom_os_yrs = globiom_ssp119[['Model', 'Scenario', '2035', '2069']].copy()
-aim_os_yrs = aim_ssp226[['Model', 'Scenario', '2035', '2098']].copy()
+globiom_os_yrs = globiom_ssp119[['Model', 'Scenario', '2032', '2073']].copy()
+magpie_os_yrs = magpie_ssp119[['Model', 'Scenario', '2033', '2071']].copy()
 
-os_plot_df = pd.concat([globiom_ssp119, aim_ssp226])
+os_plot_df = pd.concat([globiom_ssp119, magpie_ssp119])
 os_plot_df = os_plot_df[['Model', 'Scenario'] + all_years].copy()
 os_plot_df = pd.melt(os_plot_df, id_vars=['Model', 'Scenario'], var_name='Year',
                      value_vars=all_years, value_name='Temp')
@@ -461,22 +461,23 @@ os_plot_df['ModScen'] = os_plot_df['Model'] + ' ' + os_plot_df['Scenario']
 os_plot_df['Year'] = os_plot_df['Year'].astype(int)
 
 # plot illustrative figure on overshoot duration in selected scenarios
-scen_pal = {'GLOBIOM SSP1-19': 'mediumvioletred', 'AIM SSP2-26': 'cornflowerblue'}
+scen_pal = {'GLOBIOM SSP1-19': 'mediumvioletred', 'REMIND-MAgPIE SSP1-19': 'cornflowerblue'}
 plt.figure(figsize=(7, 3))
 plt.plot([2020, 2100], [1.5, 1.5], linewidth=1, linestyle='--', color='grey')
-plt.plot([2035, 2035], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
-plt.plot([2069, 2069], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
-plt.plot([2098, 2098], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
+plt.plot([2032, 2032], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
+plt.plot([2033, 2033], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
+plt.plot([2071, 2071], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
+plt.plot([2073, 2073], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
 sns.lineplot(os_plot_df, x='Year', y='Temp', hue='ModScen', palette=scen_pal,
              linewidth=4, alpha=0.7)
-plt.xlim(2020, 2100)
-plt.ylim(1.3, 1.61)
-plt.xticks([2020, 2035, 2069, 2098])
-plt.yticks([1.3, 1.4, 1.5, 1.6])
+plt.xlim(2025, 2075)
+plt.ylim(1.3, 1.66)
+plt.xticks([2025, 2030, 2050, 2070, 2075])
+plt.yticks([1.3, 1.5, 1.55, 1.6, 1.65])
 sns.despine()
 plt.xlabel('')
 plt.ylabel('Rounded median global warming\n[°C] (MAGICCv7.5.3)')
-plt.legend(bbox_to_anchor=(0, 1.15), loc='upper left',
+plt.legend(bbox_to_anchor=(0, 1.25), loc='upper left',
            columnspacing=1, handletextpad=0.4, ncols=2)
 plt.show()
 
@@ -485,29 +486,29 @@ mitigation_options = ['Afforestation', 'Bioenergy']
 
 for mitigation_option in mitigation_options:
     land_cover_interpolator('GLOBIOM', path_globiom, mitigation_option,
-                            'SSP1-19', 2030, 2040, 2035)
+                            'SSP1-19', 2030, 2040, 2032)
     land_cover_interpolator('GLOBIOM', path_globiom, mitigation_option,
-                            'SSP1-19', 2060, 2070, 2069)
+                            'SSP1-19', 2070, 2080, 2073)
 
-    land_cover_interpolator('AIM', path_aim, mitigation_option,
-                            'SSP2-26', 2030, 2040, 2035)
-    land_cover_interpolator('AIM', path_aim, mitigation_option,
-                            'SSP2-26', 2090, 2100, 2098)
+    land_cover_interpolator('MAgPIE', path_magpie, mitigation_option,
+                            'SSP1-19', 2030, 2040, 2033)
+    land_cover_interpolator('MAgPIE', path_magpie, mitigation_option,
+                            'SSP1-19', 2070, 2080, 2071)
 
 # estimate land impact on 1.5 °C-refugia before and after overshoot
-os_land_in_refugia_calculator('GLOBIOM', path_globiom, 'SSP1-19', 2035, 2069)
-os_land_in_refugia_calculator('AIM', path_aim, 'SSP2-26', 2035, 2098)
+os_land_in_refugia_calculator('GLOBIOM', path_globiom, 'SSP1-19', 2032, 2073)
+os_land_in_refugia_calculator('MAgPIE', path_magpie, 'SSP1-19', 2033, 2071)
 
 # plot difference in land impact on refugia before and after overshoot
-os_scenarios = ['GLOBIOM SSP1-19', 'AIM SSP2-26']
+os_scenarios = ['GLOBIOM SSP1-19', 'REMIND-MAgPIE SSP1-19']
 
 for scenario in os_scenarios:
     if scenario == 'GLOBIOM SSP1-19':
         path = path_globiom
         os_file = 'GLOBIOM_SSP1-19_pre_vs_post_os.tif'
-    elif scenario == 'AIM SSP2-26':
-        path = path_aim
-        os_file = 'AIM_SSP2-26_pre_vs_post_os.tif'
+    elif scenario == 'REMIND-MAgPIE SSP1-19':
+        path = path_magpie
+        os_file = 'MAgPIE_SSP1-19_pre_vs_post_os.tif'
 
     os_diff = rs.open(path / os_file)
     refug = rs.open(path_uea / 'bio1.5_bin.tif')
@@ -530,7 +531,7 @@ for scenario in os_scenarios:
     norm_os = mpl.colors.BoundaryNorm(bounds_os, mpl.cm.PuOr.N, extend='both')
 
     fig = plt.figure(figsize=(10, 6.1))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.LambertAzimuthalEqualArea())  # choose projection | LambertAzimuthalEqualArea())
+    ax = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson())  # choose projection | LambertAzimuthalEqualArea())
 
     img_re = ax.imshow(data_refug, extent=extent_refug, transform=ccrs.PlateCarree(),
                        origin='upper', cmap='Greys', alpha=0.1)
@@ -545,7 +546,7 @@ for scenario in os_scenarios:
     cbar_os.ax.tick_params(labelsize=9)
     cbar_os.set_label('Change in land-based mitigation in refugia at 1.5 °C\n(post- vs. pre-overshoot) [% cell area]',
                       labelpad=1, fontsize=9)
-    plt.title(f'{scenario}', fontsize=9, ha='center')
+    fig.text(0.45, 0.45, f'{scenario}', fontsize=9)
     plt.show()
 
 # calculate share of 1.5 °C climate refugia that would be lost at 1.6 °C
