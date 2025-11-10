@@ -273,7 +273,7 @@ sf_path = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/w
 admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 
 # adjust if necessary
-thresholds = [5, 10]  # use lower bound thresholds to exclude very low effects
+thresholds = [5]  # use lower bound thresholds to exclude very low effects
 file_scenario = 'SSP2-26'
 file_year = '2100'
 
