@@ -197,7 +197,7 @@ decline_labels = ['No recovery', 'Full recovery']
 
 rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320', '45': '#e71d24'}
 
-fig, axes = plt.subplots(2, 5, figsize=(8, 6), sharex=True, sharey=True)
+fig, axes = plt.subplots(2, 5, figsize=(9, 6), sharex=True, sharey=True)
 
 for i, decline in enumerate(decline_conditions):
     for j, model in enumerate(models):
@@ -224,9 +224,9 @@ for i, decline in enumerate(decline_conditions):
 axes[0, 0].legend(bbox_to_anchor=(-0.35, 1.32), loc='upper left', ncols=12,
                   columnspacing=0, handletextpad=0, fontsize=12)
 
-plt.xlim(-1, 20.5)
+plt.xlim(-1, 21)
 plt.ylim(-5, 70)
-plt.xticks([0, 5, 10, 15, 20])
+plt.xticks([0, 7, 14, 21])
 plt.yticks([0, 14, 28, 42, 56, 70])
 
 for ax_row in axes:
@@ -235,9 +235,9 @@ for ax_row in axes:
 
 fig.supxlabel("Today's refugia 'lost' to forestation & bioenergy plantations\n(combined effect assuming all negative) [%]",
               x=0.51, y=-0.025, fontsize=14)
-fig.supylabel("Today's refugia lost to global warming [%]", x=0.02, fontsize=14)
+fig.supylabel("Today's refugia lost to global warming [%]", x=0.033, fontsize=14)
 
-plt.subplots_adjust(hspace=0.15, wspace=0.15)
+plt.subplots_adjust(hspace=0.15, wspace=0.19)
 sns.despine()
 plt.show()
 
@@ -249,7 +249,7 @@ plot_df2 = output_1.loc[output_1['RCP'].isin(rcps_float)]
 plot_norecover = plot_df2.query('Decline == "False"').reset_index()
 plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
-plt.figure(figsize=(1.5, 5.2))
+plt.figure(figsize=(1.2, 5.2))
 sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', hue='RCP',
              palette=rcp_palette, linestyle='-', errorbar=('pi', 90),
              estimator='median')
@@ -264,7 +264,7 @@ plt.xticks([2030, 2065, 2100])
 plt.xlabel('')
 plt.ylabel("Today's refugia lost to global warming and LUC\n(combined effect assuming all negative) [%]")
 plt.legend(bbox_to_anchor=(1.19, 1.125), loc='upper right', ncols=4,
-           columnspacing=0.8, handletextpad=0.3, handlelength=1, fontsize=9.5)
+           columnspacing=0.8, handletextpad=0.2, handlelength=0.7, fontsize=9.5)
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
 
@@ -546,10 +546,10 @@ for scenario in os_scenarios:
 
     cbar_os = plt.colorbar(img_os, ax=ax, orientation='horizontal', aspect=13, pad=0.16)
     cbar_os.ax.set_position([0.41, -0.165, 0.2, 0.501])
-    cbar_os.ax.tick_params(labelsize=9)
+    cbar_os.ax.tick_params(labelsize=12)
     cbar_os.set_label('Change in land-based mitigation in refugia at 1.5 °C\n(post- vs. pre-overshoot) [% cell area]',
-                      labelpad=1, fontsize=9)
-    fig.text(0.45, 0.45, f'{scenario}', fontsize=9)
+                      labelpad=1, fontsize=12)
+    fig.text(0.45, 0.45, f'{scenario}', fontsize=12)
     plt.show()
 
 # calculate share of 1.5 °C climate refugia that would be lost at 1.6 °C
