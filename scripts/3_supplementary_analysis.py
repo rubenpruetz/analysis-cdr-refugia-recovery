@@ -90,16 +90,16 @@ bio_select.replace({'Model': {'AIM/CGE 2.0': 'AIM',
                               'REMIND-MAgPIE 1.5': 'MAgPIE'}}, inplace=True)
 
 # specify years for the analysis
-years = ['2100']
+year = ['2100']
 lookup_sub_yrs = lookup_mi_luc_df.copy()
-lookup_sub_yrs = lookup_sub_yrs.loc[lookup_sub_yrs['year'].isin(years)]
+lookup_sub_yrs = lookup_sub_yrs.loc[lookup_sub_yrs['year'].isin(year)]
 
 # %% country-level agreement of warming vs LUC in SSP2-26 2100
 sf_path = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/wab')
 admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 
 # adjust if necessary
-models = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE', 'MAgPIE']
+models_ab = ['AIM', 'GCAM', 'GLOBIOM', 'IMAGE', 'MAgPIE']
 thresholds = [1, 8, 10, 12, 15, 20]  # use lower bound thresholds to exclude very low effects
 file_scenario = 'SSP2-26'
 file_year = '2100'
@@ -108,7 +108,7 @@ file_year = '2100'
 for thres in thresholds:
 
     loss_dfs = []
-    for model in models:
+    for model in models_ab:
         if model == 'GLOBIOM':
             path = path_globiom
         elif model == 'AIM':
@@ -249,7 +249,7 @@ var_pal = {'Built-up': 'dimgrey',
            'Other cropland': 'brown',
            'Pasture': 'gold'}
 all_vars = sorted(lc_data['Variable'].unique())
-#%%
+
 fig, axes = plt.subplots(5, 4, figsize=(9, 9), sharex=True, sharey=True)
 sns.lineplot(data=lc_data.query('Model == "AIM" & RCP == "19"'),
              x='Year', y='Change', hue='Variable', palette=var_pal,
