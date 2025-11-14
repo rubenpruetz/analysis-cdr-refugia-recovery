@@ -54,24 +54,24 @@ all_years = [str(year) for year in range(2020, 2101)]
 ar6_data = ar6_db.loc[ar6_db['Variable'].isin(variable)]
 ar6_data = ar6_data.loc[ar6_data['Model'].isin(models)]
 ar6_data = ar6_data.loc[ar6_data['Scenario'].isin(scenarios)]
-ar6_data = ar6_data.round(2)  # round temperatures
+ar6_data_r = ar6_data.round(2)  # round temperatures
 
 # allow no temperature decline by calculating peak warming up until each year
 for year in range(2021, 2101):
-    cols_til_year = ar6_data.loc[:, '2020':str(year)]
-    ar6_data[f'{year}_max'] = cols_til_year.max(axis=1)
+    cols_til_year = ar6_data_r.loc[:, '2020':str(year)]
+    ar6_data_r[f'{year}_max'] = cols_til_year.max(axis=1)
 
 cols = ['Model', 'Scenario', '2020'] + [f'{year}_max' for year in range(2021, 2101)]
-ar6_data_stab = ar6_data[cols]
+ar6_data_stab = ar6_data_r[cols]
 ar6_data_stab = ar6_data_stab.rename(columns={f'{year}_max': str(year) for year in all_years})
 
-ar6_data = ar6_data[['Model', 'Scenario'] + all_years].copy()
+ar6_data_r = ar6_data_r[['Model', 'Scenario'] + all_years].copy()
 
 # %% choose between biodiv recovery or no recovery after peak warming
 temperature_decline = 'allowed'  # options: 'allowed' or 'not_allowed'
 
 if temperature_decline == 'allowed':
-    warm_file = ar6_data.copy()
+    warm_file = ar6_data_r.copy()
     recovery = 'Full recovery'
 elif temperature_decline == 'not_allowed':
     warm_file = ar6_data_stab.copy()
@@ -343,5 +343,79 @@ fig.supylabel(f'Land cover change from 2010 [Mkm$^2$] (SSP1-SSP3 range as shadin
 
 plt.subplots_adjust(hspace=0.1)
 plt.subplots_adjust(wspace=0.4)
+sns.despine()
+plt.show()
+
+#%% plot AR6 warming data per model and scenario
+rcp_palette = {'19': '#00adcf', '26': '#173c66', '34': '#f79320', '45': '#e71d24'}
+
+warm_vars = ['AR6 climate diagnostics|Surface Temperature (GSAT)|MAGICCv7.5.3|16.7th Percentile',
+             'AR6 climate diagnostics|Surface Temperature (GSAT)|MAGICCv7.5.3|50.0th Percentile',
+             'AR6 climate diagnostics|Surface Temperature (GSAT)|MAGICCv7.5.3|83.3th Percentile']
+
+warm_data = ar6_db.loc[ar6_db['Variable'].isin(warm_vars)]
+
+warm_data = pd.melt(warm_data, id_vars=['Model', 'Scenario'],
+                    value_vars=years, var_name='Year', value_name='Value')
+warm_data['SSP'] = warm_data['Scenario'].str.split('-').str[0]
+warm_data['RCP'] = warm_data['Scenario'].str.split('-').str[1]
+warm_data['Year'] = pd.to_numeric(warm_data['Year'])
+
+warm_data.replace({'Model': {'AIM/CGE 2.0': 'AIM',
+                              'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
+                              'GCAM 4.2': 'GCAM',
+                              'IMAGE 3.0.1': 'IMAGE',
+                              'REMIND-MAgPIE 1.5': 'MAgPIE'}}, inplace=True)
+
+# drop model scenario combinations that are not part of the main analysis
+warm_data.drop(warm_data[(warm_data['Model'] == 'GCAM') & (warm_data['RCP'] == '19')].index, inplace=True)
+warm_data.drop(warm_data[(warm_data['Model'] == 'GCAM') & (warm_data['RCP'] == '34')].index, inplace=True)
+warm_data.drop(warm_data[(warm_data['Model'] == 'IMAGE') & (warm_data['RCP'] == '19')].index, inplace=True)
+warm_data.drop(warm_data[(warm_data['Model'] == 'IMAGE') & (warm_data['RCP'] == '19')].index, inplace=True)
+warm_data.drop(warm_data[(warm_data['Model'] == 'MAgPIE') & (warm_data['RCP'] == '34')].index, inplace=True)
+warm_data.drop(warm_data[(warm_data['Model'] == 'MAgPIE') & (warm_data['RCP'] == '45')].index, inplace=True)
+
+# plot data
+fig, axes = plt.subplots(1, 5, figsize=(9, 6), sharey=True)
+
+sns.lineplot(data=warm_data.query('Model == "AIM"'),
+             x='Year', y='Value', hue='RCP', palette=rcp_palette,
+             errorbar=('pi', 100), estimator='median', legend=True, ax=axes[0])
+sns.lineplot(data=warm_data.query('Model == "GCAM"'),
+             x='Year', y='Value', hue='RCP', palette=rcp_palette,
+             errorbar=('pi', 100), estimator='median', legend=False, ax=axes[1])
+sns.lineplot(data=warm_data.query('Model == "GLOBIOM"'),
+             x='Year', y='Value', hue='RCP', palette=rcp_palette,
+             errorbar=('pi', 100), estimator='median', legend=False, ax=axes[2])
+sns.lineplot(data=warm_data.query('Model == "IMAGE"'),
+             x='Year', y='Value', hue='RCP', palette=rcp_palette,
+             errorbar=('pi', 100), estimator='median', legend=False, ax=axes[3])
+sns.lineplot(data=warm_data.query('Model == "MAgPIE"'),
+             x='Year', y='Value', hue='RCP', palette=rcp_palette,
+             errorbar=('pi', 100), estimator='median', legend=False, ax=axes[4])
+
+for ax in axes.flat:
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.set_xlim(2010, 2100)
+    ax.set_xticks([2010, 2055, 2100])
+    ax.set_ylim(0.5, 3.5)
+    ax.tick_params(axis='x', labelsize=11)
+    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
+
+axes[0].set_title('AIM')
+axes[1].set_title('GCAM')
+axes[2].set_title('GLOBIOM')
+axes[3].set_title('IMAGE')
+axes[4].set_title('REMIND-MAgPIE')
+
+axes[0].legend(bbox_to_anchor=(-0.05, 1.15), loc='upper left', ncols=5,
+                  columnspacing=1, handlelength=0.7, handletextpad=0.4, fontsize=11)
+
+fig.supylabel('AR6 median warming (GSAT) based on MAGICC v7.5.3 [°C]\n(shading shows likely warming range across SSP1-SSP3)',
+              x=0.05, va='center', ha='center')
+
+plt.subplots_adjust(wspace=0.5)
 sns.despine()
 plt.show()
