@@ -1,3 +1,4 @@
+
 # import libraries
 import pandas as pd
 import numpy as np
@@ -502,7 +503,7 @@ for model in models_ab:
                 ax.coastlines(linewidth=0.2)
                 ax.set_aspect(1.1)
 
-                rect = patches.Rectangle((0.311, 0.55), 0.07, 0.2, linewidth=0, 
+                rect = patches.Rectangle((0.311, 0.55), 0.07, 0.2, linewidth=0,
                                          facecolor='white', transform=fig.transFigure)
                 fig.patches.append(rect)
 
@@ -516,7 +517,7 @@ for model in models_ab:
                 cbar_be.ax.set_zorder(10)
                 cbar_ar.set_label(f'Forestation [%]', labelpad=1, fontsize=9)
                 cbar_be.set_label(f'Bioenergy [%]', labelpad=1, fontsize=9)
-                                
+
                 plt.title(f'{model} {scenario} {year}', fontsize=12, x=0.2, y=0.035,
                           ha='left', bbox=dict(facecolor='white', edgecolor='none', pad=0))
                 plt.show()
