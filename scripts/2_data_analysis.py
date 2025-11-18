@@ -13,7 +13,6 @@ import cartopy.crs as ccrs
 from cartopy.io.shapereader import Reader
 from shapely.geometry import shape
 import cartopy.feature as cfeature
-from matplotlib.patches import Patch
 from required_functions import *
 import shapefile
 from pathlib import Path
