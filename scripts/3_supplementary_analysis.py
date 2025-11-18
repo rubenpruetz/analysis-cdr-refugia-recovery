@@ -7,12 +7,10 @@ import matplotlib.patches as mpatches
 import seaborn as sns
 import rioxarray
 import rasterio as rs
-from time import time
+import cmasher as cmr
 import cartopy.crs as ccrs
 from cartopy.io.shapereader import Reader
-from shapely.geometry import shape
-import cartopy.feature as cfeature
-from matplotlib.patches import Patch
+import matplotlib.patches as patches
 from required_functions import *
 import shapefile
 from pathlib import Path
@@ -362,10 +360,10 @@ warm_data['RCP'] = warm_data['Scenario'].str.split('-').str[1]
 warm_data['Year'] = pd.to_numeric(warm_data['Year'])
 
 warm_data.replace({'Model': {'AIM/CGE 2.0': 'AIM',
-                              'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
-                              'GCAM 4.2': 'GCAM',
-                              'IMAGE 3.0.1': 'IMAGE',
-                              'REMIND-MAgPIE 1.5': 'MAgPIE'}}, inplace=True)
+                             'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
+                             'GCAM 4.2': 'GCAM',
+                             'IMAGE 3.0.1': 'IMAGE',
+                             'REMIND-MAgPIE 1.5': 'MAgPIE'}}, inplace=True)
 
 # drop model scenario combinations that are not part of the main analysis
 warm_data.drop(warm_data[(warm_data['Model'] == 'GCAM') & (warm_data['RCP'] == '19')].index, inplace=True)
@@ -411,7 +409,7 @@ axes[3].set_title('IMAGE')
 axes[4].set_title('REMIND-MAgPIE')
 
 axes[0].legend(bbox_to_anchor=(-0.05, 1.15), loc='upper left', ncols=5,
-                  columnspacing=1, handlelength=0.7, handletextpad=0.4, fontsize=11)
+               columnspacing=1, handlelength=0.7, handletextpad=0.4, fontsize=11)
 
 fig.supylabel('AR6 median warming (GSAT) based on MAGICC v7.5.3 [°C]\n(shading shows likely warming range across SSP1-SSP3)',
               x=0.05, va='center', ha='center')
@@ -419,3 +417,109 @@ fig.supylabel('AR6 median warming (GSAT) based on MAGICC v7.5.3 [°C]\n(shading 
 plt.subplots_adjust(wspace=0.5)
 sns.despine()
 plt.show()
+
+# %% plot forestation and bioenergy deployment across models and scenarios
+
+scenarios = ['SSP1-26', 'SSP1-45', 'SSP2-26', 'SSP2-45']
+years = ['2100']
+
+for model in models_ab:
+
+    if model == 'AIM':
+        path = path_aim
+    elif model == 'GCAM':
+        path = path_gcam
+    elif model == 'GLOBIOM':
+        path = path_globiom
+    elif model == 'IMAGE':
+        path = path_image
+    elif model == 'MAgPIE':
+        path = path_magpie
+
+    for scenario in scenarios:
+        for year in years:
+
+            try:
+                ar = f'{model}_Afforestation_{scenario}_{year}.tif'
+                be = f'{model}_Bioenergy_{scenario}_{year}.tif'
+
+                ar = rioxarray.open_rasterio(path / ar, masked=True)
+                be = rioxarray.open_rasterio(path / be, masked=True)
+
+                bin_land = ar.where(ar.isnull(), 1)  # all=1 if not nodata
+
+                bin_land.rio.to_raster(path / 'bin_land.tif', driver='GTiff')
+                land_area_calculation(path, 'bin_land.tif', 'bin_land_km2.tif')
+                max_land_area = rioxarray.open_rasterio(path / 'bin_land_km2.tif',
+                                                        masked=True)
+
+                ar = ar.rio.reproject_match(max_land_area)  # match
+                be = be.rio.reproject_match(max_land_area)  # match
+
+                ar_rel = ar / max_land_area * 100  # percent of max land
+                be_rel = be / max_land_area * 100  # percent of max land
+
+                # Mask values below 1%
+                perc_thres = 1
+                ar_rel = ar_rel.where(ar_rel >= perc_thres)
+                be_rel = be_rel.where(be_rel >= perc_thres)
+
+                ar_rel. rio.to_raster(path / 'ar_rel_map.tif', driver='GTiff')
+                be_rel. rio.to_raster(path / 'be_rel_map.tif', driver='GTiff')
+
+                ar = rs.open(path / 'ar_rel_map.tif')
+                be = rs.open(path / 'be_rel_map.tif')
+
+                data_ar = ar.read(1)
+                data_be = be.read(1)
+
+                # get the metadata
+                transform = ar.transform
+                extent_ar = [transform[2], transform[2] + transform[0] * ar.width,
+                             transform[5] + transform[4] * ar.height, transform[5]]
+
+                transform = be.transform
+                extent_be = [transform[2], transform[2] + transform[0] * be.width,
+                             transform[5] + transform[4] * be.height, transform[5]]
+
+                bounds_ar = [1, 5, 25, 50]
+                norm_ar = mpl.colors.BoundaryNorm(bounds_ar, mpl.cm.Greens.N, extend='max')
+                cmap_ar = cmr.get_sub_cmap('Greens', 0.2, 1)  # specify colormap subrange
+
+                bounds_be = [1, 5, 25, 50]
+                norm_be = mpl.colors.BoundaryNorm(bounds_be, mpl.cm.Reds.N, extend='max')
+                cmap_be = cmr.get_sub_cmap('Reds', 0.2, 1)  # specify colormap subrange
+
+                fig = plt.figure(figsize=(10, 6.1))
+                ax = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson())  # choose projection | LambertAzimuthalEqualArea())
+
+                img_ar = ax.imshow(data_ar, extent=extent_ar, transform=ccrs.PlateCarree(),
+                                   origin='upper', cmap=cmap_ar, norm=norm_ar, alpha=0.5)
+
+                img_be = ax.imshow(data_be, extent=extent_be, transform=ccrs.PlateCarree(),
+                                   origin='upper', cmap=cmap_be, norm=norm_be, alpha=0.5)
+
+                ax.coastlines(linewidth=0.2)
+                ax.set_aspect(1.1)
+
+                rect = patches.Rectangle((0.311, 0.55), 0.07, 0.2, linewidth=0, 
+                                         facecolor='white', transform=fig.transFigure)
+                fig.patches.append(rect)
+
+                cbar_ar = plt.colorbar(img_ar, ax=ax, orientation='horizontal', aspect=9, pad=0.16)
+                cbar_be = plt.colorbar(img_be, ax=ax, orientation='horizontal', aspect=9, pad=0.16)
+                cbar_ar.ax.set_position([0.325, 0.23, 0.07, 0.501])
+                cbar_be.ax.set_position([0.325, 0.14, 0.07, 0.501])
+                cbar_ar.ax.tick_params(labelsize=9)
+                cbar_be.ax.tick_params(labelsize=9)
+                cbar_ar.ax.set_zorder(10)
+                cbar_be.ax.set_zorder(10)
+                cbar_ar.set_label(f'Forestation [%]', labelpad=1, fontsize=9)
+                cbar_be.set_label(f'Bioenergy [%]', labelpad=1, fontsize=9)
+                                
+                plt.title(f'{model} {scenario} {year}', fontsize=12, x=0.2, y=0.035,
+                          ha='left', bbox=dict(facecolor='white', edgecolor='none', pad=0))
+                plt.show()
+            except Exception as e:
+                print(f'Error processing {model} {scenario}: {e}')
+                continue
