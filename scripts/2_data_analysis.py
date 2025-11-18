@@ -58,7 +58,7 @@ ar6_data_stab = ar6_data_stab.rename(columns={f'{year}_max': str(year) for year 
 ar6_data = ar6_data[['Model', 'Scenario'] + all_years].copy()
 
 # %% choose between biodiv recovery or no recovery after peak warming
-temperature_decline = 'allowed'  # options: 'allowed' or 'not_allowed'
+temperature_decline = 'allowed'  # options: 'allowed' or 'not_allowed' (run both)
 
 if temperature_decline == 'allowed':
     warm_file = ar6_data.copy()
