@@ -12,6 +12,8 @@ from rasterio.mask import mask
 from shapely.geometry import shape, mapping
 from pathlib import Path
 path_uea = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
+path_ref_pot = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/reforest_potential')
+path_bioeng_pot = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/Braun_et_al_2024_PB_BECCS/Results/1_source_data_figures/Fig2')
 
 # function to resample geotiffs
 def tiff_resampler(input_tif,  # input tiff (string)
@@ -111,7 +113,7 @@ def overlay_calculator(input_tif,  # land use model input file (string)
                        file_scenario,  # input file SSP-RCP scenario (string)
                        mitigation_option,  # 'Afforestation' or 'Bioenergy'
                        biodiv_ref_warm_file,  # Bio file for ref warm (1.3 °C)
-                       lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
+                       lu_model):  # AIM, GCAM, GLOBIOM, IMAGE, or REMIND-MAgPIE
 
     # STEP1: load files for LUC, refugia, and baseline refugia
     land_use = rioxarray.open_rasterio(filepath / f'{lu_model}_{input_tif}',
@@ -154,6 +156,67 @@ def overlay_calculator(input_tif,  # land use model input file (string)
     return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
         luc_in_bio_agg
 
+
+# function to overlay biodiversity and mitigation maps in harmful areas
+def overlay_calculator_harm(input_tif,  # land use model input file (string)
+                            filepath,  # filepath input file
+                            file_year,  # year of input file (string)
+                            bio_select,  # defined in the analysis script
+                            file_scenario,  # input file SSP-RCP scenario (string)
+                            mitigation_option,  # 'Afforestation' or 'Bioenergy'
+                            biodiv_ref_warm_file,  # Bio file for ref warm (1.3 °C)
+                            lu_model):  # AIM, GCAM, GLOBIOM, IMAGE, or REMIND-MAgPIE
+
+    # STEP1: load files for LUC, refugia, and baseline refugia
+    land_use = rioxarray.open_rasterio(filepath / f'{lu_model}_{input_tif}',
+                                       masked=True)  # mask nan values for calc
+
+    bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
+                                  (bio_select['Scenario'] == file_scenario)][file_year])
+
+    refugia = rioxarray.open_rasterio(path_uea / bio_file,
+                                      masked=True)  # mask nan values for calc
+
+    refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
+                                          masked=True)
+
+    if mitigation_option == 'Afforestation':
+        unsuit_area = rioxarray.open_rasterio(path_ref_pot / 'ref_not_suit.tif',
+                                              masked=True)
+    elif mitigation_option == 'Bioenergy plantation':
+        unsuit_area = rioxarray.open_rasterio(path_bioeng_pot / 'beccs_not_suit.tif',
+                                              masked=True)
+
+    # align files
+    refugia = refugia.rio.reproject_match(land_use)
+    refugia_ref = refugia_ref.rio.reproject_match(land_use)
+    unsuit_area = unsuit_area.rio.reproject_match(land_use)
+
+    # calculate warming and land impact on reference refugia (global)
+    luc_in_bio_ref = land_use * refugia_ref * unsuit_area
+    ref_bio_warm_loss = refugia_ref - refugia
+    luc_in_bio = land_use * refugia * unsuit_area
+
+    ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss_temp.tif',
+                                    driver='GTiff')
+    refugia.rio.to_raster(path_uea / 'bio_temp.tif', driver='GTiff')
+
+    # calculate refugia extents
+    ref_bio_warm_loss_a = land_area_calculation(path_uea,
+                                                'ref_bio_warm_loss_temp.tif')
+    refugia_ref_a = land_area_calculation(path_uea, biodiv_ref_warm_file)
+
+    # calculate aggregated area "losses" and baseline refugia
+    luc_in_bio_ref_agg = pos_val_summer(luc_in_bio_ref, squeeze=True)
+    ref_bio_warm_loss_agg = pos_val_summer(ref_bio_warm_loss_a, squeeze=True)
+    refugia_ref_agg = pos_val_summer(refugia_ref_a, squeeze=True)
+
+    luc_in_bio_agg = pos_val_summer(luc_in_bio, squeeze=True)
+
+    return luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, \
+        luc_in_bio_agg
+
+
 # function to overlay raster and admin boundary shapefile
 def admin_bound_calculator(key, admin_sf, intersect_src):
     sf = admin_sf
@@ -185,7 +248,7 @@ def warm_vs_luc_plotter(filepath,  # filepath input file
                         bio_select,  # defined in the analysis script
                         file_scenario,  # input file SSP-RCP scenario (string)
                         biodiv_ref_warm_file,  # Bio file for ref warm (1.3 °C)
-                        lu_model):  # AIM, GCAM, GLOBIOM or IMAGE
+                        lu_model):  # AIM, GCAM, GLOBIOM, IMAGE, or REMIND-MAgPIE
 
     # STEP1: load files for LUC, refugia, and baseline refugia
     ar_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Afforestation_{file_scenario}_{file_year}.tif',

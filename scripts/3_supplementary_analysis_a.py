@@ -27,6 +27,8 @@ path_globiom = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodivers
 path_image = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/image_maps')
 path_magpie = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/magpie_maps')
 path_ar6_data = Path('/Users/rpruetz/Documents/phd/datasets')
+ath_ref_pot = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/reforest_potential')
+path_bioeng_pot = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/Braun_et_al_2024_PB_BECCS/Results/1_source_data_figures/Fig2')
 
 ar6_db = pd.read_csv(path_ar6_data / 'AR6_Scenarios_Database_World_v1.1.csv')
 lookup_mi_luc_df = pd.read_csv(path_project / 'lookup_table_ar_bioenergy_files_all_models.csv')
@@ -334,7 +336,7 @@ for temperature_decline in temperature_declines:
 
         start = time()  # runtime monitoring
 
-        # use overlay_calculator
+        # use overlay_calculator_harm
         def process_row(row):
             input_tif = row['file_name']
             file_year = row['year']
@@ -342,16 +344,16 @@ for temperature_decline in temperature_declines:
             mitigation_option = row['mitigation_option']
 
             try:
-                # run overlay_calculator for all scenarios to retrieve areas as outputs
+                # run overlay_calculator_harm for all scenarios to retrieve areas as outputs
                 luc_in_bio_ref_agg, ref_bio_warm_loss_agg, refugia_ref_agg, luc_in_bio_agg = \
-                    overlay_calculator(input_tif,
-                                       path,
-                                       file_year,
-                                       bio_select,
-                                       file_scenario,
-                                       mitigation_option,
-                                       'bio1.3_bin.tif',
-                                       model)
+                    overlay_calculator_harm(input_tif,
+                                            path,
+                                            file_year,
+                                            bio_select,
+                                            file_scenario,
+                                            mitigation_option,
+                                            'bio1.3_bin.tif',
+                                            model)
 
                 # create a dictionary with the calculated values
                 result_dict = {
@@ -458,9 +460,9 @@ axes[0, 0].legend(bbox_to_anchor=(-0.35, 1.32), loc='upper left', ncols=12,
                   columnspacing=0, handletextpad=0, fontsize=12)
 
 plt.xlim(-1, 21)
-plt.ylim(-5, 75)
+plt.ylim(-5, 70)
 plt.xticks([0, 7, 14, 21])
-plt.yticks([0, 16, 32, 48, 64, 80])
+plt.yticks([0, 14, 28, 42, 57, 70])
 
 for ax_row in axes:
     for ax in ax_row:
@@ -468,7 +470,7 @@ for ax_row in axes:
 
 fig.supxlabel("Today's refugia 'lost' to forestation & bioenergy plantations\n(combined effect in likely harmed areas) [%]",
               x=0.51, y=-0.025, fontsize=14)
-fig.supylabel("Today's refugia lost to 83.3rd percentile warming [%]", x=0.033, fontsize=14)
+fig.supylabel("Today's refugia lost to gobal warming [%]", x=0.033, fontsize=14)
 
 plt.subplots_adjust(hspace=0.15, wspace=0.19)
 sns.despine()
