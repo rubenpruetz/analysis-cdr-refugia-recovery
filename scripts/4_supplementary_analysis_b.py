@@ -518,8 +518,12 @@ for model in models_ab:
                 cbar_ar.set_label(f'Forestation [%]', labelpad=1, fontsize=9)
                 cbar_be.set_label(f'Bioenergy [%]', labelpad=1, fontsize=9)
 
-                plt.title(f'{model} {scenario} {year}', fontsize=12, x=0.2, y=0.035,
-                          ha='left', bbox=dict(facecolor='white', edgecolor='none', pad=0))
+                if model == 'MAgPIE':
+                    plt.title(f'REMIND-MAgPIE {scenario} {year}', fontsize=12, x=0.2, y=0.035,
+                              ha='left', bbox=dict(facecolor='white', edgecolor='none', pad=0))
+                else: plt.title(f'{model} {scenario} {year}', fontsize=12, x=0.2, y=0.035,
+                                ha='left', bbox=dict(facecolor='white', edgecolor='none', pad=0))
+
                 plt.show()
             except Exception as e:
                 print(f'Error processing {model} {scenario}: {e}')
