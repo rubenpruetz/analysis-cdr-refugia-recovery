@@ -134,7 +134,7 @@ def overlay_calculator(input_tif,  # land use model input file (string)
 
     # calculate warming and land impact on reference refugia (global)
     luc_in_bio_ref = land_use * refugia_ref
-    ref_bio_warm_loss = refugia_ref - refugia
+    ref_bio_warm_loss = refugia_ref - refugia  # if negative, land area calc will give zero
     luc_in_bio = land_use * refugia
 
     ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss_temp.tif',
@@ -194,7 +194,7 @@ def overlay_calculator_harm(input_tif,  # land use model input file (string)
 
     # calculate warming and land impact on reference refugia (global)
     luc_in_bio_ref = land_use * refugia_ref * unsuit_area
-    ref_bio_warm_loss = refugia_ref - refugia
+    ref_bio_warm_loss = refugia_ref - refugia  # if negative, land area calc will give zero
     luc_in_bio = land_use * refugia * unsuit_area
 
     ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss_temp.tif',

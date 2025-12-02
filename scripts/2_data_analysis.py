@@ -154,9 +154,9 @@ for model in models:
     area_df.reset_index(inplace=True)
 
     # set LUC in refugia to LUC in today's refugia where warming goes below 1.3 °C
-    area_df['luc_in_refug'] = area_df['luc_in_refug_ref'].where(area_df['luc_in_refug'] >
-                                                                area_df['luc_in_refug_ref'],
-                                                                area_df['luc_in_refug'])
+    #area_df['luc_in_refug'] = area_df['luc_in_refug_ref'].where(area_df['luc_in_refug'] >
+     #                                                           area_df['luc_in_refug_ref'],
+      #                                                          area_df['luc_in_refug'])
 
     area_df['warm_loss_perc'] = area_df['refug_ref_warm_loss'] / area_df['refug_ref'] * 100
     area_df['luc_loss_perc'] = area_df['luc_in_refug_ref'] / area_df['refug_ref'] * 100
@@ -176,7 +176,7 @@ for model in models:
 
 # %% plot warming versus land use change impact on refugia
 # note: previous code needs to run first in BOTH modes: 'allowed' & 'not_allowed'
-paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom, 
+paths = {'AIM': path_aim, 'GCAM': path_gcam, 'GLOBIOM': path_globiom,
          'IMAGE': path_image, 'MAgPIE': path_magpie}
 decline_df = load_and_concat('area_df_temp_decline_allowed', paths)
 decline_df['Decline'] = 'True'
