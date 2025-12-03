@@ -154,9 +154,9 @@ for model in models:
     area_df.reset_index(inplace=True)
 
     # set LUC in refugia to LUC in today's refugia where warming goes below 1.3 °C
-    #area_df['luc_in_refug'] = area_df['luc_in_refug_ref'].where(area_df['luc_in_refug'] >
-     #                                                           area_df['luc_in_refug_ref'],
-      #                                                          area_df['luc_in_refug'])
+    area_df['luc_in_refug'] = area_df['luc_in_refug_ref'].where(area_df['luc_in_refug'] >
+                                                                area_df['luc_in_refug_ref'],
+                                                                area_df['luc_in_refug'])
 
     area_df['warm_loss_perc'] = area_df['refug_ref_warm_loss'] / area_df['refug_ref'] * 100
     area_df['luc_loss_perc'] = area_df['luc_in_refug_ref'] / area_df['refug_ref'] * 100
@@ -240,7 +240,7 @@ plt.subplots_adjust(hspace=0.15, wspace=0.19)
 sns.despine()
 plt.show()
 
-#%% plot combined refugia loss from global warming and mitigation
+# %% plot combined refugia loss from global warming and mitigation
 rcps_float = [float(r) for r in rcps]
 rcp_palette = {19: '#00adcf', 26: '#173c66', 34: '#f79320', 45: '#e71d24'}
 

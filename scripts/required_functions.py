@@ -297,6 +297,71 @@ def warm_vs_luc_plotter(filepath,  # filepath input file
     loss_df['model'] = lu_model
     return loss_df
 
+# function to compare model agreement on predominent effect at country level (harmful luc only)
+def warm_vs_luc_plotter_harm(filepath,  # filepath input file
+                             file_year,  # year of input file (string)
+                             admin_sf,  # administrative boundary shapefile
+                             bio_select,  # defined in the analysis script
+                             file_scenario,  # input file SSP-RCP scenario (string)
+                             biodiv_ref_warm_file,  # Bio file for ref warm (1.3 °C)
+                             lu_model):  # AIM, GCAM, GLOBIOM, IMAGE, or REMIND-MAgPIE
+
+    # STEP1: load files for LUC, refugia, and baseline refugia
+    ar_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Afforestation_{file_scenario}_{file_year}.tif',
+                                      masked=True)  # mask nan values for calc
+    be_file = rioxarray.open_rasterio(filepath / f'{lu_model}_Bioenergy_{file_scenario}_{file_year}.tif',
+                                      masked=True)  # mask nan values for calc
+
+    ar_unsuit = rioxarray.open_rasterio(path_ref_pot / 'ref_not_suit.tif',
+                                        masked=True)
+
+    be_unsuit = rioxarray.open_rasterio(path_bioeng_pot / 'beccs_not_suit.tif',
+                                        masked=True)
+
+    bio_file = ''.join(bio_select[(bio_select['Model'] == lu_model) &
+                                  (bio_select['Scenario'] == file_scenario)][file_year])
+
+    refugia = rioxarray.open_rasterio(path_uea / bio_file,
+                                      masked=True)  # mask nan values for calc
+
+    refugia_ref = rioxarray.open_rasterio(path_uea / biodiv_ref_warm_file,
+                                          masked=True)
+
+    # align files
+    be_file = be_file.rio.reproject_match(ar_file)
+    ar_unsuit = ar_unsuit.rio.reproject_match(ar_file)
+    be_unsuit = be_unsuit.rio.reproject_match(ar_file)
+
+    luc_file = (ar_file * ar_unsuit) + (be_file * be_unsuit)
+
+    refugia = refugia.rio.reproject_match(luc_file)
+    refugia_ref = refugia_ref.rio.reproject_match(luc_file)
+
+    # calculate warming and land impact on reference refugia
+    luc_in_bio_ref = luc_file * refugia_ref
+    luc_in_bio_ref.rio.to_raster(filepath / 'luc_in_bio_ref_harm.tif')
+
+    ref_bio_warm_loss = refugia_ref - refugia
+    ref_bio_warm_loss.rio.to_raster(path_uea / 'ref_bio_warm_loss.tif')
+    land_area_calculation(path_uea, 'ref_bio_warm_loss.tif', 'ref_bio_warm_loss_a.tif')
+
+    # calculate warming and luc loss per country
+    warm_loss = rs.open(path_uea / 'ref_bio_warm_loss_a.tif', masked=True)
+    luc_loss = rs.open(filepath / 'luc_in_bio_ref_harm.tif', masked=True)
+    warm_df = admin_bound_calculator('warm_loss', admin_sf, warm_loss)
+    luc_df = admin_bound_calculator('luc_loss', admin_sf, luc_loss)
+
+    loss_df = pd.merge(warm_df, luc_df, on='iso3', how='outer',
+                       suffixes=['_warm', '_luc'])
+
+    # assign values: 1 = warm > luc; -1 = warm < luc; nan = warm == luc
+    loss_df['impact'] = np.where(loss_df['km2_warm'] >
+                                 loss_df['km2_luc'], 1,
+                                 np.where(loss_df['km2_warm'] <
+                                          loss_df['km2_luc'], -1, np.nan))
+    loss_df['model'] = lu_model
+    return loss_df
+
 # sum cells in array that are positive (squeeze removes non-required dims)
 def pos_val_summer(arr, squeeze=True):
     if squeeze:
