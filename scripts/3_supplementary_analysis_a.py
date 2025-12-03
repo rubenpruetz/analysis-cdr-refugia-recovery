@@ -516,7 +516,7 @@ file_year = '2100'
 for thres in thresholds:
 
     loss_dfs = []
-    for model in models:
+    for model in models_ab:
         if model == 'GLOBIOM':
             path = path_globiom
         elif model == 'AIM':
@@ -606,7 +606,7 @@ for thres in thresholds:
 output_2 = loss_dfs[['model', 'scenario', 'year', 'recovery', 'iso3',
                      'warm_loss_perc', 'luc_loss_perc']].copy()
 
-for model in models:
+for model in models_ab:
     bivar_map = output_2.query('model == @model').reset_index()
     bivar_map = bivar_map.dropna(subset=['warm_loss_perc', 'luc_loss_perc']).copy()
 
