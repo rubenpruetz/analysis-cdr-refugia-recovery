@@ -551,9 +551,9 @@ for scenario in os_scenarios:
     fig.text(0.45, 0.45, f'{scenario}', fontsize=12)
     plt.show()
 
-# calculate share of 1.5 °C climate refugia that would be lost at 1.6 °C
+# calculate share of 1.5 °C climate refugia that would be lost at 1.65 °C
 refugia1p5 = rioxarray.open_rasterio(path_uea / 'bio1.5_bin.tif', masked=True)
-refugia1p6 = rioxarray.open_rasterio(path_uea / 'bio1.6_bin.tif', masked=True)
+refugia1p6 = rioxarray.open_rasterio(path_uea / 'bio1.65_bin.tif', masked=True)
 
 bio_warm_loss = refugia1p5 - refugia1p6
 bio_warm_loss.rio.to_raster(path_uea / 'warm_loss1.6-1.5.tif', driver='GTiff')
@@ -563,7 +563,7 @@ refug1p5 = land_area_calculation(path_uea, 'bio1.5_bin.tif')
 lost_ref = pos_val_summer(lost_ref, squeeze=True)
 refug1p5 = pos_val_summer(refug1p5, squeeze=True)
 lost_share = (lost_ref / refug1p5) * 100
-print('Share of 1.5°C-refugia lost at 1.6 °C peak (%):', lost_share)
+print('Share of 1.5°C-refugia lost at 1.65 °C peak (%):', lost_share)
 
 # %% export output data
 output_1 = output_1[['Model', 'scenario', 'Year', 'Decline', 'refug_ref_warm_loss',
