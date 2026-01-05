@@ -18,14 +18,14 @@ import shapefile
 from pathlib import Path
 plt.rcParams.update({'figure.dpi': 600})
 
-path_project = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity')
-path_uea = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
-path_aim = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/aim_maps')
-path_gcam = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/gcam_maps')
-path_globiom = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/globiom_maps')
-path_image = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/image_maps')
-path_magpie = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/magpie_maps')
-path_ar6_data = Path('/Users/rpruetz/Documents/phd/datasets')
+path_project = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity')
+path_uea = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
+path_aim = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/aim_maps')
+path_gcam = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/gcam_maps')
+path_globiom = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/globiom_maps')
+path_image = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/image_maps')
+path_magpie = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/magpie_maps')
+path_ar6_data = Path('/Users/rpruetz/Documents/work/datasets')
 
 ar6_db = pd.read_csv(path_ar6_data / 'AR6_Scenarios_Database_World_v1.1.csv')
 lookup_mi_luc_df = pd.read_csv(path_project / 'lookup_table_ar_bioenergy_files_all_models.csv')
@@ -268,7 +268,7 @@ plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
 
 # %% country-level agreement of warming vs LUC in SSP2-26 2100
-sf_path = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/wab')
+sf_path = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/wab')
 admin_sf = shapefile.Reader(sf_path / 'world-administrative-boundaries.shp')
 
 # adjust if necessary

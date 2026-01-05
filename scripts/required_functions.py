@@ -11,9 +11,9 @@ import seaborn as sns
 from rasterio.mask import mask
 from shapely.geometry import shape, mapping
 from pathlib import Path
-path_uea = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
-path_ref_pot = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/reforest_potential')
-path_bioeng_pot = Path('/Users/rpruetz/Documents/phd/primary/analyses/cdr_biodiversity/Braun_et_al_2024_PB_BECCS/Results/1_source_data_figures/Fig2')
+path_uea = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
+path_ref_pot = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/reforest_potential')
+path_bioeng_pot = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/Braun_et_al_2024_PB_BECCS/Results/1_source_data_figures/Fig2')
 
 # function to resample geotiffs
 def tiff_resampler(input_tif,  # input tiff (string)
