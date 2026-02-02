@@ -489,7 +489,7 @@ plt.xlim(2030, 2100)
 plt.ylim(0, 80)
 plt.xticks([2030, 2065, 2100])
 plt.xlabel('')
-plt.ylabel("Today's refugia lost to global warming and likely harmful LUC\n(combined effect assuming all negative) [%]")
+plt.ylabel("Today's refugia lost to global warming and likely harmful LUC\n(combined effect) [%]")
 plt.legend(bbox_to_anchor=(1.19, 1.125), loc='upper right', ncols=4,
            columnspacing=0.8, handletextpad=0.2, handlelength=0.5, fontsize=9.5)
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
