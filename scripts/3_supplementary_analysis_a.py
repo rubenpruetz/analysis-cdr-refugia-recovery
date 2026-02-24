@@ -3,19 +3,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import matplotlib.patches as mpatches
 import seaborn as sns
-import rioxarray
-import rasterio as rs
 from time import time
-import cartopy.crs as ccrs
-from cartopy.io.shapereader import Reader
-from shapely.geometry import shape
-import cartopy.feature as cfeature
-from matplotlib.patches import Patch
 from required_functions import *
-import shapefile
 from pathlib import Path
 plt.rcParams.update({'figure.dpi': 600})
 
