@@ -462,7 +462,7 @@ os_plot_df['ModScen'] = os_plot_df['Model'] + ' ' + os_plot_df['Scenario']
 os_plot_df['Year'] = os_plot_df['Year'].astype(int)
 
 # plot illustrative figure on overshoot duration in selected scenarios
-scen_pal = {'GLOBIOM SSP1-19': 'mediumvioletred', 'REMIND-MAgPIE SSP1-19': 'cornflowerblue'}
+scen_pal = {'GLOBIOM SSP1-19': 'darkorange', 'REMIND-MAgPIE SSP1-19': 'steelblue'}
 plt.figure(figsize=(10, 1.6))
 plt.plot([2020, 2100], [1.5, 1.5], linewidth=1, linestyle='--', color='grey')
 plt.plot([2032, 2032], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
@@ -538,7 +538,7 @@ for scenario in os_scenarios:
                        origin='upper', cmap='Greys', alpha=0.1)
 
     img_os = ax.imshow(data_os_diff, extent=extent_os, transform=ccrs.PlateCarree(),
-                       origin='upper', cmap='PuOr', norm=norm_os, alpha=1)
+                       origin='upper', cmap='PiYG_r', norm=norm_os, alpha=1)
 
     ax.coastlines(linewidth=0.2)
     ax.set_aspect(1.1)
