@@ -452,7 +452,7 @@ for ax_row in axes:
 
 fig.supxlabel("Today's refugia 'lost' to forestation & bioenergy plantations\n(combined effect in likely harmed areas) [%]",
               x=0.51, y=-0.025, fontsize=14)
-fig.supylabel("Today's refugia lost to gobal warming [%]", x=0.033, fontsize=14)
+fig.supylabel("Today's refugia lost to global warming [%]", x=0.033, fontsize=14)
 
 plt.subplots_adjust(hspace=0.15, wspace=0.19)
 sns.despine()
