@@ -450,7 +450,6 @@ os_df.replace({'Model': {'MESSAGE-GLOBIOM 1.0': 'GLOBIOM',
 globiom_ssp119 = os_df.query('Model == "GLOBIOM" & Scenario == "SSP1-19"')
 magpie_ssp119 = os_df.query('Model == "REMIND-MAgPIE" & Scenario == "SSP1-19"')
 
-# select last year before and first year after overshoot of 1.5 °C
 globiom_os_yrs = globiom_ssp119[['Model', 'Scenario', '2032', '2073']].copy()
 magpie_os_yrs = magpie_ssp119[['Model', 'Scenario', '2033', '2071']].copy()
 
@@ -461,7 +460,6 @@ os_plot_df = pd.melt(os_plot_df, id_vars=['Model', 'Scenario'], var_name='Year',
 os_plot_df['ModScen'] = os_plot_df['Model'] + ' ' + os_plot_df['Scenario']
 os_plot_df['Year'] = os_plot_df['Year'].astype(int)
 
-# plot illustrative figure on overshoot duration in selected scenarios
 scen_pal = {'GLOBIOM SSP1-19': 'darkorange', 'REMIND-MAgPIE SSP1-19': 'steelblue'}
 plt.figure(figsize=(10, 1.6))
 plt.plot([2020, 2100], [1.5, 1.5], linewidth=1, linestyle='--', color='grey')
@@ -482,7 +480,6 @@ plt.legend(bbox_to_anchor=(0, 1.25), loc='upper left', fontsize=9,
            columnspacing=1, handletextpad=0.5, ncols=2, handlelength=0.2)
 plt.show()
 
-# estimate land for AR and bioenergy for the start and end year of overshoot
 mitigation_options = ['Afforestation', 'Bioenergy']
 
 for mitigation_option in mitigation_options:
@@ -490,18 +487,17 @@ for mitigation_option in mitigation_options:
                             'SSP1-19', 2030, 2040, 2032)
     land_cover_interpolator('GLOBIOM', path_globiom, mitigation_option,
                             'SSP1-19', 2070, 2080, 2073)
-
     land_cover_interpolator('MAgPIE', path_magpie, mitigation_option,
                             'SSP1-19', 2030, 2040, 2033)
     land_cover_interpolator('MAgPIE', path_magpie, mitigation_option,
                             'SSP1-19', 2070, 2080, 2071)
 
-# estimate land impact on 1.5 °C-refugia before and after overshoot
 os_land_in_refugia_calculator('GLOBIOM', path_globiom, 'SSP1-19', 2032, 2073)
 os_land_in_refugia_calculator('MAgPIE', path_magpie, 'SSP1-19', 2033, 2071)
 
-# plot difference in land impact on refugia before and after overshoot
 os_scenarios = ['GLOBIOM SSP1-19', 'REMIND-MAgPIE SSP1-19']
+
+mpl.rcParams['hatch.linewidth'] = 0.35
 
 for scenario in os_scenarios:
     if scenario == 'GLOBIOM SSP1-19':
@@ -514,12 +510,15 @@ for scenario in os_scenarios:
     os_diff = rs.open(path / os_file)
     refug = rs.open(path_uea / 'bio1.5_bin.tif')
 
-    data_os_diff = os_diff.read(1)
+    data_os_diff = os_diff.read(1).astype(float)
     data_refug = refug.read(1)
 
-    data_os_diff[data_os_diff == 0] = np.nan  # ignore zero values
+    data_os_diff[data_os_diff == 0] = np.nan
 
-    # get the metadata
+    hatch_mask = (data_os_diff > -1) & (data_os_diff < 1)
+    data_os_diff_plot = data_os_diff.copy()
+    data_os_diff_plot[hatch_mask] = np.nan
+
     transform = os_diff.transform
     extent_os = [transform[2], transform[2] + transform[0] * os_diff.width,
                  transform[5] + transform[4] * os_diff.height, transform[5]]
@@ -532,13 +531,23 @@ for scenario in os_scenarios:
     norm_os = mpl.colors.BoundaryNorm(bounds_os, mpl.cm.PuOr.N, extend='both')
 
     fig = plt.figure(figsize=(10, 6.1))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson())  # choose projection | LambertAzimuthalEqualArea())
+    ax = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson())
 
-    img_re = ax.imshow(data_refug, extent=extent_refug, transform=ccrs.PlateCarree(),
-                       origin='upper', cmap='Greys', alpha=0.1)
+    ax.imshow(data_refug, extent=extent_refug, transform=ccrs.PlateCarree(),
+              origin='upper', cmap='Greys', alpha=0.1)
 
-    img_os = ax.imshow(data_os_diff, extent=extent_os, transform=ccrs.PlateCarree(),
+    img_os = ax.imshow(data_os_diff_plot, extent=extent_os, transform=ccrs.PlateCarree(),
                        origin='upper', cmap='PiYG_r', norm=norm_os, alpha=1)
+
+    # hatch the masked region on the map
+    hatch_data = np.where(hatch_mask, 1, np.nan)  # 1 is arbitrary; just needs to be within levels
+    ny, nx = hatch_mask.shape
+    x_coords = np.linspace(extent_os[0], extent_os[1], nx)
+    y_coords = np.linspace(extent_os[3], extent_os[2], ny)
+    X, Y = np.meshgrid(x_coords, y_coords)
+    ax.contourf(X, Y, hatch_data, levels=[0.9, 1.1],  # levels is arbitrary; just needs to capture hatch_mask
+                transform=ccrs.PlateCarree(),
+                hatches=['////////'], colors='none')
 
     ax.coastlines(linewidth=0.2)
     ax.set_aspect(1.1)
@@ -548,6 +557,11 @@ for scenario in os_scenarios:
     cbar_os.ax.tick_params(labelsize=12)
     cbar_os.set_label('Change in land-based mitigation in refugia at 1.5 °C\n(post- vs. pre-overshoot) [% cell area]',
                       labelpad=1, fontsize=12)
+
+    # hatch the -1 to 1 segment of the colorbar using fill_between
+    cbar_os.ax.fill_between([0.4, 0.6], 0, 1, hatch='////', facecolor='none',
+                            edgecolor='black', linewidth=0, transform=cbar_os.ax.transAxes)
+
     fig.text(0.45, 0.45, f'{scenario}', fontsize=12)
     plt.show()
 
