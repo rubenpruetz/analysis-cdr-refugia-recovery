@@ -444,7 +444,7 @@ axes[0, 0].legend(bbox_to_anchor=(-0.35, 1.32), loc='upper left', ncols=12,
 plt.xlim(-1, 21)
 plt.ylim(-5, 70)
 plt.xticks([0, 7, 14, 21])
-plt.yticks([0, 14, 28, 42, 57, 70])
+plt.yticks([0, 14, 28, 42, 56, 70])
 
 for ax_row in axes:
     for ax in ax_row:
