@@ -212,8 +212,16 @@ for i, decline in enumerate(decline_conditions):
         if i == 1:
             axes[i, j].set_xlabel('')
 
-axes[0, 0].legend(bbox_to_anchor=(-0.35, 1.32), loc='upper left', ncols=12,
-                  columnspacing=0, handletextpad=0, fontsize=12)
+handles, labels = axes[0, 0].get_legend_handles_labels()
+filtered = [(h, l) for h, l in zip(handles, labels) if l not in ('RCP', 'Year')]
+handles, labels = zip(*filtered)  # removel 'RCP' and 'Year' from legend entries
+
+rename_dict = {'19': '1.5 °C', '26': '2 °C', '34': '>2 °C','45': 'Current policies'}
+new_labels = [rename_dict.get(label, label) for label in labels]
+
+axes[0, 0].legend(handles, new_labels, bbox_to_anchor=(-0.41, 1.32), loc='upper left',
+                  ncols=12, columnspacing=0.3, handletextpad=0, fontsize=12,
+                  frameon=False, title='')
 
 plt.xlim(-1, 21)
 plt.ylim(-5, 75)
@@ -240,10 +248,10 @@ plot_df2 = output_1.loc[output_1['RCP'].isin(rcps_float)]
 plot_norecover = plot_df2.query('Decline == "False"').reset_index()
 plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
-plt.figure(figsize=(1.2, 5.2))
+plt.figure(figsize=(1.2, 5.6))
 sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', hue='RCP',
              palette=rcp_palette, linestyle='-', errorbar=('pi', 90),
-             estimator='median')
+             estimator='median', legend=False)
 sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP',
              palette=rcp_palette, linestyle='--', errorbar=('pi', 90),
              estimator='median', legend=False)
@@ -254,8 +262,6 @@ plt.ylim(0, 80)
 plt.xticks([2030, 2065, 2100])
 plt.xlabel('')
 plt.ylabel("Today's refugia lost to global warming (83.3rd percentile) and LUC\n(combined effect assuming all negative) [%]")
-plt.legend(bbox_to_anchor=(1.19, 1.125), loc='upper right', ncols=4,
-           columnspacing=0.8, handletextpad=0.2, handlelength=0.5, fontsize=9.5)
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
 
@@ -438,8 +444,16 @@ for i, decline in enumerate(decline_conditions):
         if i == 1:
             axes[i, j].set_xlabel('')
 
-axes[0, 0].legend(bbox_to_anchor=(-0.35, 1.32), loc='upper left', ncols=12,
-                  columnspacing=0, handletextpad=0, fontsize=12)
+handles, labels = axes[0, 0].get_legend_handles_labels()
+filtered = [(h, l) for h, l in zip(handles, labels) if l not in ('RCP', 'Year')]
+handles, labels = zip(*filtered)  # removel 'RCP' and 'Year' from legend entries
+
+rename_dict = {'19': '1.5 °C', '26': '2 °C', '34': '>2 °C','45': 'Current policies'}
+new_labels = [rename_dict.get(label, label) for label in labels]
+
+axes[0, 0].legend(handles, new_labels, bbox_to_anchor=(-0.41, 1.32), loc='upper left',
+                  ncols=12, columnspacing=0.3, handletextpad=0, fontsize=12,
+                  frameon=False, title='')
 
 plt.xlim(-1, 21)
 plt.ylim(-5, 70)
@@ -466,10 +480,10 @@ plot_df2 = output_1.loc[output_1['RCP'].isin(rcps_float)]
 plot_norecover = plot_df2.query('Decline == "False"').reset_index()
 plot_recover = plot_df2.query('Decline == "True"').reset_index()
 
-plt.figure(figsize=(1.2, 5.2))
+plt.figure(figsize=(1.2, 5.6))
 sns.lineplot(data=plot_norecover, x='Year', y='total_loss_perc', hue='RCP',
              palette=rcp_palette, linestyle='-', errorbar=('pi', 90),
-             estimator='median')
+             estimator='median', legend=False)
 sns.lineplot(data=plot_recover, x='Year', y='total_loss_perc', hue='RCP',
              palette=rcp_palette, linestyle='--', errorbar=('pi', 90),
              estimator='median', legend=False)
@@ -480,7 +494,5 @@ plt.ylim(0, 80)
 plt.xticks([2030, 2065, 2100])
 plt.xlabel('')
 plt.ylabel("Today's refugia lost to global warming and likely harmful LUC\n(combined effect) [%]")
-plt.legend(bbox_to_anchor=(1.19, 1.125), loc='upper right', ncols=4,
-           columnspacing=0.8, handletextpad=0.2, handlelength=0.5, fontsize=9.5)
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
 plt.show()
