@@ -15,6 +15,14 @@ path_uea = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity
 path_ref_pot = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/reforest_potential')
 path_bioeng_pot = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/Braun_et_al_2024_PB_BECCS/Results/1_source_data_figures/Fig2')
 
+# sum cells in array that are positive (squeeze removes non-required dims)
+def pos_val_summer(arr, squeeze=True):
+    if squeeze:
+        arr = np.squeeze(arr)
+
+    arr = np.clip(arr, 0, None)  # set values below zero to 0
+    return np.nansum(arr)  # sum only non-NaN values
+
 # function to resample geotiffs
 def tiff_resampler(input_tif,  # input tiff (string)
                    target_resolution,  # target x and y cell resolution (tuple)
@@ -361,14 +369,6 @@ def warm_vs_luc_plotter_harm(filepath,  # filepath input file
                                           loss_df['km2_luc'], -1, np.nan))
     loss_df['model'] = lu_model
     return loss_df
-
-# sum cells in array that are positive (squeeze removes non-required dims)
-def pos_val_summer(arr, squeeze=True):
-    if squeeze:
-        arr = np.squeeze(arr)
-
-    arr = np.clip(arr, 0, None)  # set values below zero to 0
-    return np.nansum(arr)  # sum only non-NaN values
 
 # function to concat multiple dfs across models
 def load_and_concat(suffix, paths):

@@ -17,7 +17,7 @@ path_globiom = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiver
 path_image = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/image_maps')
 path_magpie = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/magpie_maps')
 path_ar6_data = Path('/Users/rpruetz/Documents/work/datasets')
-ath_ref_pot = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/reforest_potential')
+path_ref_pot = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/reforest_potential')
 path_bioeng_pot = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/Braun_et_al_2024_PB_BECCS/Results/1_source_data_figures/Fig2')
 
 ar6_db = pd.read_csv(path_ar6_data / 'AR6_Scenarios_Database_World_v1.1.csv')
