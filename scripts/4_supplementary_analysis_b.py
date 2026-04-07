@@ -410,7 +410,11 @@ axes[2].set_title('GLOBIOM')
 axes[3].set_title('IMAGE')
 axes[4].set_title('REMIND-MAgPIE')
 
-axes[0].legend(bbox_to_anchor=(-0.05, 1.15), loc='upper left', ncols=5,
+handles, labels = axes[0].get_legend_handles_labels()
+rename_dict = {'19': '1.5 °C', '26': '2 °C', '34': '>2 °C','45': 'Current policies'}
+new_labels = [rename_dict.get(label, label) for label in labels]
+
+axes[0].legend(handles, new_labels, bbox_to_anchor=(-0.05, 1.15), loc='upper left', ncols=5,
                columnspacing=1, handlelength=0.7, handletextpad=0.4, fontsize=11)
 
 fig.supylabel('AR6 median warming (GSAT) based on MAGICC v7.5.3 [°C]\n(shading shows likely warming range across SSP1-SSP3)',
