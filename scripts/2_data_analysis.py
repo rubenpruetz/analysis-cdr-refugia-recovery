@@ -391,8 +391,6 @@ for model in models:
                     ['#d18792', '#7e5194', '#160e97'],
                     ['#d3d3d3', '#7f7fd7', '#1616da']]
 
-    flat_colors = [color_matrix[row][col] for row in range(3) for col in range(3)]
-
     color_map = bivar_map.set_index('iso3')['bivar_class'].to_dict()
 
     fig = plt.figure(figsize=(11, 6))
