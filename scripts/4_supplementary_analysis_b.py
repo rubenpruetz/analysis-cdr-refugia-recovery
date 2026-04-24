@@ -371,7 +371,6 @@ warm_data.replace({'Model': {'AIM/CGE 2.0': 'AIM',
 warm_data.drop(warm_data[(warm_data['Model'] == 'GCAM') & (warm_data['RCP'] == '19')].index, inplace=True)
 warm_data.drop(warm_data[(warm_data['Model'] == 'GCAM') & (warm_data['RCP'] == '34')].index, inplace=True)
 warm_data.drop(warm_data[(warm_data['Model'] == 'IMAGE') & (warm_data['RCP'] == '19')].index, inplace=True)
-warm_data.drop(warm_data[(warm_data['Model'] == 'IMAGE') & (warm_data['RCP'] == '19')].index, inplace=True)
 warm_data.drop(warm_data[(warm_data['Model'] == 'MAgPIE') & (warm_data['RCP'] == '34')].index, inplace=True)
 warm_data.drop(warm_data[(warm_data['Model'] == 'MAgPIE') & (warm_data['RCP'] == '45')].index, inplace=True)
 
@@ -541,8 +540,6 @@ for model in models_ab:
     color_matrix = [['#cf0523', '#7d0323', '#150024'],
                     ['#d18792', '#7e5194', '#160e97'],
                     ['#d3d3d3', '#7f7fd7', '#1616da']]
-
-    flat_colors = [color_matrix[row][col] for row in range(3) for col in range(3)]
 
     color_map = bivar_map.set_index('iso3')['bivar_class'].to_dict()
 
