@@ -464,7 +464,7 @@ os_plot_df = pd.melt(os_plot_df, id_vars=['Model', 'Scenario'], var_name='Year',
 os_plot_df['ModScen'] = os_plot_df['Model'] + ' ' + os_plot_df['Scenario']
 os_plot_df['Year'] = os_plot_df['Year'].astype(int)
 
-scen_pal = {'GLOBIOM SSP1-19': 'darkorange', 'REMIND-MAgPIE SSP1-19': 'steelblue'}
+scen_pal = {'GLOBIOM SSP1-19': 'coral', 'REMIND-MAgPIE SSP1-19': 'crimson'}
 plt.figure(figsize=(10, 1.6))
 plt.plot([2020, 2100], [1.5, 1.5], linewidth=1, linestyle='--', color='grey')
 plt.plot([2032, 2032], [1.3, 1.5], linewidth=1, linestyle='--', color='grey')
@@ -542,7 +542,7 @@ for scenario in os_scenarios:
               origin='upper', cmap='Greys', alpha=0.1)
 
     img_os = ax.imshow(data_os_diff_plot, extent=extent_os, transform=ccrs.PlateCarree(),
-                       origin='upper', cmap='PiYG_r', norm=norm_os, alpha=1)
+                       origin='upper', cmap='PuOr', norm=norm_os, alpha=1)
 
     # hatch the masked region on the map
     hatch_data = np.where(hatch_mask, 1, np.nan)  # 1 is arbitrary; just needs to be within levels
