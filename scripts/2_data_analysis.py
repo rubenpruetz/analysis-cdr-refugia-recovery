@@ -16,7 +16,10 @@ import cartopy.feature as cfeature
 from required_functions import *
 import shapefile
 from pathlib import Path
+
 plt.rcParams.update({'figure.dpi': 600})
+plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams['ps.fonttype'] = 42
 
 path_project = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity')
 path_uea = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/uea_maps/UEA_20km')
@@ -26,6 +29,7 @@ path_globiom = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiver
 path_image = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/image_maps')
 path_magpie = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/magpie_maps')
 path_ar6_data = Path('/Users/rpruetz/Documents/work/datasets')
+fig_path = Path('/Users/rpruetz/Documents/work/primary/analyses/cdr_biodiversity/analysis_cdr_refugia_recovery/final_figs')
 
 ar6_db = pd.read_csv(path_ar6_data / 'AR6_Scenarios_Database_World_v1.1.csv')
 lookup_mi_luc_df = pd.read_csv(path_project / 'lookup_table_ar_bioenergy_files_all_models.csv')
@@ -246,6 +250,7 @@ fig.supylabel("Today's refugia lost to global warming [%]", x=0.033, fontsize=14
 
 plt.subplots_adjust(hspace=0.15, wspace=0.19)
 sns.despine()
+plt.savefig(fig_path / 'fig1a.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # %% plot combined refugia loss from global warming and mitigation
@@ -271,6 +276,7 @@ plt.xticks([2030, 2065, 2100])
 plt.xlabel('')
 plt.ylabel("Today's refugia lost to global warming and LUC\n(combined effect assuming all negative) [%]")
 plt.grid(True, axis='y', linestyle='--', linewidth=0.5, alpha=0.8)
+plt.savefig(fig_path / 'fig1b.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # %% country-level agreement of warming vs LUC in SSP2-26 2100
@@ -370,6 +376,7 @@ for thres in thresholds:
 
     plt.title(f"Model agreement {file_scenario} {file_year} \n({recovery} & min. 'loss' of {thres}%)",
               fontsize=15, x=0.375, y=0.125, ha='left')
+    plt.savefig(fig_path / 'fig2a.pdf', format='pdf', bbox_inches='tight')
     plt.show()
 
 # %% bivariate maps of warming vs LUC at country level per model (SSP2-26 2100)
@@ -444,6 +451,7 @@ for model in models:
     if model == 'MAgPIE':
         model_name = 'REMIND-MAgPIE'
     fig.text(0.313, 0.27, f'{model_name} SSP2-26 2100\n({recovery})', fontsize=15)
+    plt.savefig(fig_path / f'fig2_{model_name}.pdf', format='pdf', bbox_inches='tight')
     plt.show()
 
 # %% comparison of refugia impact at 1.5 °C before and after overshoot
@@ -483,6 +491,7 @@ plt.ylabel('Global warming [°C]\n(MAGICCv7.5.3)')
 plt.legend(bbox_to_anchor=(0, 1.25), loc='upper left', fontsize=9,
            columnspacing=1, handletextpad=0.6, ncols=2, handlelength=0.5,
            frameon=False)
+plt.savefig(fig_path / 'fig3a.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 mitigation_options = ['Afforestation', 'Bioenergy']
@@ -568,6 +577,7 @@ for scenario in os_scenarios:
                             edgecolor='black', linewidth=0, transform=cbar_os.ax.transAxes)
 
     fig.text(0.45, 0.45, f'{scenario}', fontsize=12)
+    plt.savefig(fig_path / f'fig3_{scenario}.pdf', format='pdf', bbox_inches='tight')
     plt.show()
 
 # calculate share of 1.5 °C climate refugia that would be lost at 1.65 °C
